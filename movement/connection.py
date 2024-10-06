@@ -15,8 +15,7 @@ class Connection:
                 self.connection = hid.device()
                 self.connection.open_path(self.info['path'])
         if self.connection is None: raise AssertionError("Could not find a matching device.")
-        else:
-            print(f"Successfully conntected to {self.info['product_string']}.")
+        else: print(f"Successfully conntected to {self.info['product_string']}.")
     def close(self):
         if self.connection is None: return
         self.connection.close()
@@ -26,14 +25,3 @@ class Connection:
         self.connection.write(m)
     def read_in(self): #TODO
         pass
-
-if __name__ == "__main__":
-    device = Connection()
-    pid = 0x5750 # 0x5750
-    vid = 0x0483 # 0x0483
-    device.connect(pid, vid)
-    import time
-    device.write_out([85,85,8,3,1,0,5,1,1,1,1,0]) # gripper open grip
-    time.sleep(2)
-    device.write_out([85,85,8,3,1,0,5,1,255,100,1,0]) # gripper closed grip
-    device.close()
