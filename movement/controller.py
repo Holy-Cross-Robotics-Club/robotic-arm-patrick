@@ -14,12 +14,14 @@ class Servo:
         pass
     def is_moving(self):
         return self.__is_moving
-    def set_position(self, t, time):
-        pos = self.__normalize_pos(t)
+    def set_position_hex(self, pos, time):
         pos = self.__swap_halves(pos)
         pos = self.__split_bytes(pos)
         #move gripper: [85, 85, # bytes, command, # servos, time(2), time(1), servo id, pos(2), pos(1)]
         self.controller.connection.write_out([85, 85, 7, 3, 1, 0, time, self.id, pos[0], pos[1]])
+    def set_position(self, t, time):
+        pos = self.__normalize_pos(t)
+        self.set_position_hex(pos, time)
     def set_position_min(self, time):
         self.set_position(0, time)
     def set_position_max(self, time):
@@ -41,39 +43,62 @@ class ServoGripper(Servo):
     def __init__(self, controller):
         super().__init__(controller)
         self.id = 1
-        self.position_range = [0x00A0, 0x02C0] # these are hard-coded TODO: self calibration?
+        self.position_range = [0x00A0, 0x02C0] # these are hard-coded
+
+class ServoWrist(Servo):
+    def __init__(self, controller):
+        super().__init__(controller)
+        self.id = 2
+        self.position_range = [0x0080, 0x0350]
+
+class ServoElbow(Servo):
+    def __init__(self, controller):
+        super().__init__(controller)
+        self.id = 3
+        self.position_range = [0x0040, 0x0400]
 
 class ServoBase(Servo):
     def __init__(self, controller):
         super().__init__(controller)
+        self.id = 6
+        self.position_range = [0x0010, 0x0400]
 
 class Controller:
     def __init__(self):
         self.connection = Connection()
-        self.gripper = ServoGripper(self)
-        self.base = ServoBase(self)
+        self.gripper = ServoGripper(self) # id 6
+        self.elbow = ServoElbow(self) # id 3
+        self.wrist = ServoWrist(self) # id 2
+        self.base = ServoBase(self) # id 1
         self.product_id = 0x5750
         self.vendor_id = 0x0483
+    def reset_servos(self):
+        self.gripper.set_position(0.5,3)
+        self.wrist.set_position(0.5,3)
+        self.elbow.set_position(0.5,3)
+        self.base.set_position(0.5,3)
     def connect(self):
+        self.connection = Connection()
         self.connection.connect(self.product_id, self.vendor_id)
     def disconnect(self):
         self.connection.close()
 
 if __name__ == "__main__":
+    import time
     # test code
     controller = Controller()
     controller.connect()
-    import time
-    # controller.gripper.set_position(0, 5) # all the way open
-    # time.sleep(2)
-    # controller.gripper.set_position(0.5, 5) # in between
-    # time.sleep(2)
-    # controller.gripper.set_position(1, 5) # all the way closed
-    # time.sleep(2)
-    # controller.gripper.set_position(0.5, 5)
+    controller.reset_servos()
+    time.sleep(2)
+
     t = 0
     while t <= 1.0:
-        controller.gripper.set_position(t, 2) # close gripper in steady increments
+        controller.gripper.set_position(t, 3) # move base in steady increments
+        controller.base.set_position(t, 3) # two servos can move at the same time!
+        controller.wrist.set_position(1-t, 3) # this one too!
+        controller.elbow.set_position(t,3)
         t += 0.1
-        time.sleep(2)
+        time.sleep(2.5)
+    
+    controller.reset_servos()
     controller.disconnect()
