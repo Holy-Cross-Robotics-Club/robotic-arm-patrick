@@ -55,18 +55,33 @@ class ServoElbow(Servo):
     def __init__(self, controller):
         super().__init__(controller)
         self.id = 3
-        self.position_range = [0x0040, 0x0400]
+        self.position_range = [0x003a, 0x039f]
+
+class ServoElbow2(Servo):
+    def __init__(self, controller):
+        super().__init__(controller)
+        self.id = 4
+        self.position_range = [0x0004, 0x03e1]
+
+class ServoShoulder(Servo):
+    def __init__(self, controller):
+        super().__init__(controller)
+        self.id = 5
+        self.position_range = [0x0090, 0x0370]
 
 class ServoBase(Servo):
     def __init__(self, controller):
         super().__init__(controller)
         self.id = 6
-        self.position_range = [0x0010, 0x0400]
+        self.position_range = [0x0000, 0x03f0]
+
 
 class Controller:
     def __init__(self):
         self.connection = Connection()
         self.gripper = ServoGripper(self) # id 6
+        self.shoulder = ServoShoulder(self) # id 5
+        self.elbow2 = ServoElbow2(self) # id 4
         self.elbow = ServoElbow(self) # id 3
         self.wrist = ServoWrist(self) # id 2
         self.base = ServoBase(self) # id 1
@@ -75,7 +90,9 @@ class Controller:
     def reset_servos(self):
         self.gripper.set_position(0.5,3)
         self.wrist.set_position(0.5,3)
-        self.elbow.set_position(0.5,3)
+        self.elbow2.set_position(0.5,3)
+        self.elbow.set_position(0.5, 3)
+        self.shoulder.set_position(0.5, 3)
         self.base.set_position(0.5,3)
     def connect(self):
         self.connection = Connection()
@@ -97,8 +114,10 @@ if __name__ == "__main__":
         controller.base.set_position(t, 3) # two servos can move at the same time!
         controller.wrist.set_position(1-t, 3) # this one too!
         controller.elbow.set_position(t,3)
+        controller.elbow2.set_position(t,3)
+        controller.shoulder.set_position(t,3)
         t += 0.1
-        time.sleep(2.5)
+        time.sleep(1)
     
     controller.reset_servos()
     controller.disconnect()
