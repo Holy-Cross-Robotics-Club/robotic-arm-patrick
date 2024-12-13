@@ -23,5 +23,8 @@ class Connection:
     def write_out(self, m):
         # TODO: do some sanity checks
         self.connection.write(m)
-    def read_in(self): #TODO
-        pass
+    def read_in(self, cmd, num_bytes):
+        data = self.connection.read(4 + num_bytes)
+        if data[0] == 85 and data[1] == 85 and data[2] == num_bytes and data[3] == cmd:
+            return data[4:]
+        else: return None
