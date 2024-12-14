@@ -14,7 +14,7 @@ class Servo:
         self.controller = controller
         self.curr_set_pos = 0.5
     def get_position_hex(self):
-        self.controller.connection.write_out([85, 85, 3, 21, 1, self.id])
+        self.controller.connection.write_out([85, 85, 4, 21, 1, self.id])
         result = self.controller.connection.read_in(21, 6)
         hex = (result[3] * 256 + result[2]) # returns hex
         return hex
@@ -38,7 +38,7 @@ class Servo:
         pos = self.__swap_halves(pos)
         pos = self.__split_bytes(pos)
         #move gripper: [85, 85, # bytes, command, # servos, time(2), time(1), servo id, pos(2), pos(1)]
-        self.controller.connection.write_out([85, 85, 7, 3, 1, 0, time, self.id, pos[0], pos[1]])
+        self.controller.connection.write_out([85, 85, 8, 3, 1, 0, time, self.id, pos[0], pos[1]])
     def set_position(self, t, time):
         t = int(t * 100) / 100 # round to nearest hundredths
         pos = self.__normalize_pos(t)
@@ -67,10 +67,15 @@ class Servo:
         t = (hex - self.position_range[0])/(self.position_range[1] - self.position_range[0])
         return int(t * 100) / 100 # round to nearest hundredths
     def __normalized_to_radians(self, t):
-        return self.radian_range[0] + t * ( (self.radian_range[1] + (np.pi / 2)) - (self.radian_range[0] + (np.pi / 2)))
+        rad = self.radian_range[0] + t * (self.radian_range[1] - self.radian_range[0])
+        #shifted_rad = rad + (np.pi / 2)
+        shifted_rad = rad
+        return shifted_rad
     def __normalized_from_radians(self, rad):
-        t = (rad - self.radian_range[0] + (np.pi / 2))/(self.radian_range[1] + (np.pi / 2) - self.radian_range[0] + (np.pi / 2))
-        return int(t * 100) / 100
+        #shifted_rad = rad - (np.pi / 2)
+        shifted_rad = rad
+        t = (shifted_rad - self.radian_range[0]) / (self.radian_range[1] - self.radian_range[0])
+        return t
 
 class ServoGripper(Servo):
     def __init__(self, controller):
@@ -83,36 +88,46 @@ class ServoWrist(Servo):
     def __init__(self, controller):
         super().__init__(controller)
         self.id = 2
-        self.position_range = [0x0080, 0x0350]
-        self.radian_range = [-1 * np.pi, np.pi]
+        #self.position_range = [0x0080, 0x0350]
+        self.position_range = [200, 980]
+        #self.radian_range = [-1 * np.pi, np.pi]
+        self.radian_range = [0, np.pi]
 
 class ServoElbow(Servo):
     def __init__(self, controller):
         super().__init__(controller)
         self.id = 3
-        self.position_range = [0x003a, 0x039f]
-        self.radian_range = [-1 * 3 * (np.pi)/4, 3 * (np.pi)/4]
+        #self.position_range = [0x003a, 0x039f]
+        self.position_range = [140, 880]
+        #self.radian_range = [-1 * 3 * (np.pi)/4, 3 * (np.pi)/4]
+        self.radian_range = [0, np.pi]
 
 class ServoElbow2(Servo):
     def __init__(self, controller):
         super().__init__(controller)
         self.id = 4
-        self.position_range = [0x0004, 0x03e1]
-        self.radian_range = [-1 * 3 * (np.pi)/4, 3 * (np.pi)/4]
+        #self.position_range = [0x0004, 0x03e1]
+        self.position_range = [130, 870]
+        #self.radian_range = [-1 * 3 * (np.pi)/4, 3 * (np.pi)/4]
+        self.radian_range = [0, np.pi]
 
 class ServoShoulder(Servo):
     def __init__(self, controller):
         super().__init__(controller)
         self.id = 5
-        self.position_range = [0x0090, 0x0370]
-        self.radian_range = [-1 * np.pi/2, np.pi/2]
+        #self.position_range = [0x0090, 0x0370]
+        self.position_range = [140, 880]
+        #self.radian_range = [-1 * np.pi/2, np.pi/2]
+        self.radian_range = [0, np.pi]
 
 class ServoBase(Servo):
     def __init__(self, controller):
         super().__init__(controller)
         self.id = 6
-        self.position_range = [0x0000, 0x03f0]
-        self.radian_range = [-1 * np.pi, np.pi]
+        #self.position_range = [0x0000, 0x03f0]
+        self.position_range = [90, 845]
+        #self.radian_range = [-1 * np.pi, np.pi]
+        self.radian_range = [0, np.pi]
 
 class Controller:
     def __init__(self):
@@ -143,7 +158,7 @@ if __name__ == "__main__":
     controller = Controller()
     controller.connect()
     #controller.reset_servos()
-    print("END RESET")
+    #print("END RESET")
     #clock.sleep(3)
 
     # t = 0
@@ -160,14 +175,14 @@ if __name__ == "__main__":
     wrist = controller.wrist
     gripper = controller.gripper
 
-    cart_target = np.transpose(np.array([0.6, 0, 0.1]))
+    cart_target = np.transpose(np.array([0.2, 0, 0.15]))
 
     while True:
         clock.sleep(0.5)
         q_current = np.array([base.get_position_radians(), shoulder.get_position_radians(), elbow2.get_position_radians(), elbow.get_position_radians(), 0, wrist.get_position_radians()])
         q_delta = calculate_joint_angles_delta(q_current, cart_target)
         q_new = np.array(q_current) + q_delta
-        print(q_delta)
+        print(f"q_delta: {q_delta}")
         base.set_position_radians(q_new[0], 5)
         shoulder.set_position_radians(q_new[1], 5)
         elbow2.set_position_radians(q_new[2], 5)

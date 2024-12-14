@@ -194,12 +194,12 @@ def calculate_joint_angles_delta(q_current, target):
     J = J[0:3,:]
 
     end_pos = anthroarm_dm(q_current)[1]
-    print(end_pos)
+    print(f"end_pos: {end_pos}")
     
     # Compute the pseudo-inverse of the Jacobian
     J_pinv = np.linalg.pinv(J)
     
     q_delta = J_pinv @ (target - end_pos)
-    q_delta = (q_delta / np.linalg.norm(q_delta))
+    q_delta = (q_delta / np.linalg.norm(q_delta)) * 0.1
     
     return q_delta
