@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+    <title>xArm 6-DOF Robotic Manipulator</title>
+    <link rel="stylesheet" href="arm.css">
+</head>
+<body>
+    <div id="controls">
+        <div class="control-group"><label>    Base (6):</label><input type="range" id="base">     <span id="baseValue">initializing</span> </div>
+        <div class="control-group"><label>Shoulder (5):</label><input type="range" id="shoulder"> <span id="shoulderValue">initializing</span> </div>
+        <div class="control-group"><label>   Elbow (4):</label><input type="range" id="elbow">    <span id="elbowValue">initializing</span> </div>
+        <div class="control-group"><label>   Wrist (3):</label><input type="range" id="wrist">    <span id="wristValue">initializing</span> </div>
+        <div class="control-group"><label>    Hand (2):</label><input type="range" id="hand">     <span id="handValue">initializing</span> </div>
+        <div class="control-group"><label>    Grip (1):</label><input type="range" id="grip">     <span id="gripValue">initializing</span> </div>
+        <button id="clearButton">Clear Path</button>
+        <button id="homeButton">Home</button>
+    </div>
+    <div id="coords" class="coords">Coordinates</div>
+
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
+    <script src="arm.js"></script>
+
+</body>
+</html>

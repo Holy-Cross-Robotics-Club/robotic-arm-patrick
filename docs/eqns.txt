@@ -1,0 +1,57 @@
+This is some scrap work to convince myself that the equations used in the
+original kinematics.py code (labeled "bmc" below) are equivalent to multiplying
+out the homogenous matrices for the alleged DH table. The equations seem to be
+equivalent, which convinces me that:
+
+ (a) The kinematics code is using this "classical" DH parameter table:
+           θ      α     a         d
+      1)   θ_1   90     0         0
+      2)   θ_2    0     a2=0.155  0
+      3)   θ_3   90     0         0
+      4)   θ_4  -90     0         d4=0.096
+      5)   θ_5   90     0         0
+      6)   θ_6    0     0         d6=0.100
+
+ (b) The Jacobian, forward kinematics equations, etc., are all using standard
+     formulations, except for a tweak that disables one unused joint.
+
+
+f14 = a2c1c2+d4(c1c3s2+c1c2s3)+d6(−c5(−c1c3s2−c1c2s3)+(c4(c1c2c3−c1s2s3)+s1s4)s5)
+f24 = a2c2s1+d4(c3s1s2+c2s1s3)+d6(−c5(−c3s1s2−c2s1s3)+(c4(c2c3s1−s1s2s3)−c1s4)s5)
+f34 = a2s2+d4(−c2c3+s2s3)+d6(−c5(c2c3−s2s3)+c4(c3s2+c2s3)s5)
+   c23 = np.cos(q[1] + q[2]) = c2c3-s2s3
+   s23 = np.sin(q[1] + q[2]) = s2c3+c2s3 = c3s2+c2s3
+              cos(a+b) = cos(a)cos(b)−sin(a)sin(b)
+              sin(a+b) = sin(a)cos(b)+cos(a)sin(b)
+
+f34 = a2s2+d4(−c2c3+s2s3)+d6(−c5(c2c3−s2s3)+c4(c3s2+c2s3)s5)
+f34 = a2s2-d4(c2c3-s2s3) +d6(−c5(c2c3−s2s3)+c4(c3s2+c2s3)s5)
+f34 = a2s2-d4(  c23    ) +d6(−c5(  c23    )+c4(   s23   )s5)
+f34 = a2 * s2 - d4 * c23 + d6 * (−c5*c23+c4*s23*s5)
+f34 = a2 * s2 - d4 * c23 + d6 * ( c4*s23*s5−c5*c23)
+f34 = a2 * s2 - d4 * c23 + d6 * (s23 * c4 * s5 − c23 * c5)
+bmc = a2 * s2 - d4 * c23 + d6 * (s23 * c4 * s5 - c23 * c5)
+
+f24 = a2c2s1+d4(c3s1s2+c2s1s3)+d6(−c5(−c3s1s2−c2s1s3)+ (c4(c2c3s1−s1s2s3)−c1s4)s5)
+f24 = a2c2s1+d4s1(c3s2+c2s3)  +d6( c5( c3s1s2+c2s1s3)+ s1c4s5(c2c3−s2s3)−c1s4s5)
+f24 = a2 * s1 * c2 + d4 * s1 * s23 + d6 * (c5(c3s1s2+c2s1s3)+s1c4s5(c2c3−s2s3)−c1s4s5)
+f24 = a2 * s1 * c2 + d4 * s1 * s23 + d6 * (s1c5(c3s2+c2s3)  +s1c4s5c23       −c1s4s5)
+f24 = a2 * s1 * c2 + d4 * s1 * s23 + d6 * (s1 * (c5(c3s2+c2s3)  +c4s5c23)  −c1s4s5)
+f24 = a2 * s1 * c2 + d4 * s1 * s23 + d6 * (s1 * (c5(c3s2+c2s3)  +c4s5c23)  − c1 * s4 * s5)
+f24 = a2 * s1 * c2 + d4 * s1 * s23 + d6 * (s1 * (c5(s23) + c4s5c23)        − c1 * s4 * s5)
+f24 = a2 * s1 * c2 + d4 * s1 * s23 + d6 * (s1 * (c4s5c23 + c5(s23))        − c1 * s4 * s5)
+f24 = a2 * s1 * c2 + d4 * s1 * s23 + d6 * (s1 * (c23c4s5 + c5*s23 )        − c1 * s4 * s5)
+f24 = a2 * s1 * c2 + d4 * s1 * s23 + d6 * (s1 * (c23 * c4 * s5 + s23 * c5) − c1 * s4 * s5)
+bmc = a2 * s1 * c2 + d4 * s1 * s23 + d6 * (s1 * (c23 * c4 * s5 + s23 * c5) - c1 * s4 * s5)
+
+f14 = a2 * c1 * c2 + d4 * (c1c3s2 + c1c2s3)  + d6 * (−c5 * (−c1c3s2−c1c2s3) + (c4*(c1c2c3−c1s2s3)+s1s4)*s5)
+f14 = a2 * c1 * c2 + d4 * c1 * (c3s2+c2s3)   + d6 * ( c5 * ( c1c3s2+c1c2s3) + (c4*(c1c2c3−c1s2s3)+s1s4)*s5)
+f14 = a2 * c1 * c2 + d4 * c1 * (c3s2+c2s3)   + d6 * (c1 * c5 * (c3s2+c2s3)  + (c1*c4*(c2c3−s2s3) +s1s4)*s5)
+f14 = a2 * c1 * c2 + d4 * c1 * (   s23   )   + d6 * (c1 * c5 * (   s23   )  + (c1*c4*(   c23  )+s1s4)*s5)
+f14 = a2 * c1 * c2 + d4 * c1 *     s23       + d6 * (c1 * c5 * s23          +     (c1*c4*c23  + s1s4)*s5      )
+f14 = a2 * c1 * c2 + d4 * c1 *     s23       + d6 * (c1 * c5 * s23          +   s5*c1*c4*c23 +  s5*s1*s4      )
+f14 = a2 * c1 * c2 + d4 * c1 *     s23       + d6 * (c1 * c5 * s23          +   s5*c1*c4*c23                +  s1 * s4 * s5)
+f14 = a2 * c1 * c2 + d4 * c1 *     s23       + d6 * (c1 * ( c5 * s23        +   s5*c4*c23   )               +  s1 * s4 * s5)
+f14 = a2 * c1 * c2 + d4 * c1 *     s23       + d6 * (c1 * ( c23 * c4 * s5   + s23 * c5  )                   +  s1 * s4 * s5)
+bmc = a2 * c1 * c2 + d4 * c1 *     s23       + d6 * (c1 * ( c23 * c4 * s5   + s23 * c5  )                   +  s1 * s4 * s5),
+
