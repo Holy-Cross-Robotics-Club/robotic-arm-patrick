@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Coordinate System</title>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
+k
+    <style>
+        body { margin: 0; }
+        canvas { display: block; }
+        .axis-label {
+            position: absolute;
+            font-weight: bold;
+            pointer-events: none;
+        }
+        #controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(255, 255, 255, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .control-group {
+            margin: 10px 0;
+        }
+        sub {
+            font-size: 0.6em;
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <table border="0" cellpadding="1" cellspacing="0" style="border-color: rgb(219, 219, 219);">
+            <tr>
+                <th>#</th>
+                <th>&theta;<sub>min</sub></th>
+                <th>&theta;<sub>max</sub></th>
+                <th>&theta;<sub>interactive</sub></th>
+                <th>&theta;</th>
+                <th>&alpha;</th>
+                <th>a</th>
+                <th>d</th>
+            </tr>
+            <tr>
+            <td>1:</td>
+            <td><input id="l1" maxlength="3" size="3" value="0"></td>
+            <td><input id="h1" maxlength="3" size="3" value="0"></td>
+            <td><input id="t1" type="range"></td>
+            <td><input id="o1" maxlength="3" size="3" value="0"></td>
+            <td><input id="a1" maxlength="3" size="3" value="0"></td>
+            <td><input id="r1" maxlength="2" size="2" value="0"></td>
+            <td><input id="d1" maxlength="2" size="2" value="0"></td>
+            </tr>
+            <tr>
+            <td>2:</td>
+            <td><input id="l2" maxlength="3" size="3" value="0"></td>
+            <td><input id="h2" maxlength="3" size="3" value="0"></td>
+            <td><input id="t2" type="range"></td>
+            <td><input id="o2" maxlength="3" size="3" value="0"></td>
+            <td><input id="a2" maxlength="3" size="3" value="0"></td>
+            <td><input id="r2" maxlength="2" size="2" value="0"></td>
+            <td><input id="d2" maxlength="2" size="2" value="0"></td>
+            </tr>
+            <tr>
+            <td>3:</td>
+            <td><input id="l3" maxlength="3" size="3" value="0"></td>
+            <td><input id="h3" maxlength="3" size="3" value="0"></td>
+            <td><input id="t3" type="range"></td>
+            <td><input id="o3" maxlength="3" size="3" value="0"></td>
+            <td><input id="a3" maxlength="3" size="3" value="0"></td>
+            <td><input id="r3" maxlength="2" size="2" value="0"></td>
+            <td><input id="d3" maxlength="2" size="2" value="0"></td>
+            </tr>
+            <tr>
+            <td>4:</td>
+            <td><input id="l4" maxlength="3" size="3" value="0"></td>
+            <td><input id="h4" maxlength="3" size="3" value="0"></td>
+            <td><input id="t4" type="range"></td>
+            <td><input id="o4" maxlength="3" size="3" value="0"></td>
+            <td><input id="a4" maxlength="3" size="3" value="0"></td>
+            <td><input id="r4" maxlength="2" size="2" value="0"></td>
+            <td><input id="d4" maxlength="2" size="2" value="0"></td>
+            </tr>
+            <tr>
+            <td>5:</td>
+            <td><input id="l5" maxlength="3" size="3" value="0"></td>
+            <td><input id="h5" maxlength="3" size="3" value="0"></td>
+            <td><input id="t5" type="range"></td>
+            <td><input id="o5" maxlength="3" size="3" value="0"></td>
+            <td><input id="a5" maxlength="3" size="3" value="0"></td>
+            <td><input id="r5" maxlength="2" size="2" value="0"></td>
+            <td><input id="d5" maxlength="2" size="2" value="0"></td>
+            </tr>
+        </table>
+        <button id="resetButton">Reset</button>
+        <button id="shareButton">Share</button>
+    </div>
+
+<script>
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setClearColor(0xffffff, 1); // Set background to white
+    document.body.appendChild(renderer.domElement);
+
+    // Add grid
+    const gridHelper = new THREE.GridHelper(10, 10);
+    scene.add(gridHelper);
+
+    const axisUpdateFunctions = [];
+
+    // Create arrows
+    function createArrow(color, direction, label, i) {
+        const linkGroup = new THREE.Group();
+        const length = 1;
+        const radius = 0.05;
+        const cylinderGeometry = new THREE.CylinderGeometry(radius, radius, length, 3);
+        const material = new THREE.MeshBasicMaterial({color: color});
+        const cylinder = new THREE.Mesh(cylinderGeometry, material);
+        const coneHeight = 0.3;
+        const coneRadius = 0.15;
+        const coneGeometry = new THREE.ConeGeometry(coneRadius, coneHeight, 3);
+        const cone = new THREE.Mesh(coneGeometry, material);
+        if (direction.z === 1) {
+            cylinder.rotation.x = Math.PI/2;
+            cylinder.position.z = length/2;
+            cone.rotation.x = Math.PI/2;
+            cone.position.z = length;
+        } else if (direction.y === 1) {
+            cylinder.position.y = length/2;
+            cone.position.y = length;
+        } else if (direction.x === 1) {
+            cylinder.rotation.z = Math.PI/2;
+            cylinder.position.x = length/2;
+            cone.rotation.z = -Math.PI/2;
+            cone.position.x = length;
+        }
+        
+        const div = document.createElement('div');
+        div.className = 'axis-label';
+        div.innerHTML = label + '<sub>' + i + '</sub>';
+        // div.style.color = '#' + (0x1000000 + color).toString(16).substr(1);
+        document.body.appendChild(div);
+        axisUpdateFunctions.push(() => {
+            const pos = new THREE.Vector3();
+            cone.getWorldPosition(pos);
+            const vector = pos.clone();
+            vector.project(camera);
+            div.style.left = (vector.x + 1) * window.innerWidth / 2 + 'px';
+            div.style.top = (-vector.y + 1) * window.innerHeight / 2 + 'px';
+        });
+
+        linkGroup.add(cylinder);
+        linkGroup.add(cone);
+        return linkGroup;
+    }
+    function createAxis(i, n) {
+        const linkGroup = new THREE.Group();
+        if (i < n) {
+            geometry = new THREE.CylinderGeometry(0.4, 0.4, 0.2, 32);
+            color = new THREE.MeshBasicMaterial({color: 0xff0000, transparent: true, opacity: 0.5});
+        } else {
+            geometry = new THREE.SphereGeometry(0.1, 32, 32);
+            color = new THREE.MeshBasicMaterial({color: 0x000000});
+        }
+        const joint = new THREE.Mesh(geometry, color);
+        joint.rotation.x = Math.PI/2;
+        linkGroup.add(joint);
+        linkGroup.add(createArrow(0x6666ff, new THREE.Vector3(1, 0, 0), "X", i)); // X axis - blue
+        linkGroup.add(createArrow(0x66ff66, new THREE.Vector3(0, 1, 0), "Y", i)); // Y axis - green
+        linkGroup.add(createArrow(0xff3333, new THREE.Vector3(0, 0, 1), "Z", i)); // Z axis - red
+        return linkGroup;
+    }
+
+    // theta_offset, alpha, a, d
+    const dh_table = [
+        {theta_offset: 0,  alpha: 90, a: 0, d: 2, min: -180, max: 180},
+        {theta_offset: 90, alpha: 0,  a: 2, d: 0, min: -90, max: 90},
+        {theta_offset: 0,  alpha: 0,  a: 2, d: 0, min: -90, max: 90},
+        {theta_offset: 90, alpha: 90, a: 0, d: 0, min: -90, max: 90},
+        {theta_offset: 0,  alpha: 0,  a: 0, d: 2, min: -90, max: 90},
+    ];
+
+    const axis0 = createAxis(0, dh_table.length);
+    axis0.rotation.x = -Math.PI/2;
+    let prev = axis0;
+    let i = 1;
+    const axes = [ axis0 ];
+    const links = [];
+    const joints = [];
+    dh_table.forEach(dh => {
+        const link = new THREE.Group();
+        link.position.z = dh.d;
+        link.rotation.z = THREE.MathUtils.degToRad(dh.theta_offset);
+        links.push(link);
+        const joint = new THREE.Group();
+        joint.position.x = dh.a;
+        joint.rotation.x = THREE.MathUtils.degToRad(dh.alpha);
+        joints.push(joint);
+        const axis = createAxis(i, dh_table.length);
+        joint.add(axis);
+        link.add(joint);
+        prev.add(link);
+        prev = axis;
+        axes.push(axis);
+        i++;
+    });
+    scene.add(axis0);
+
+    camera.position.set(6, 8, 12);
+    camera.lookAt(0, 0, 0);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+    for (let i = 0; i < 5; i++) {
+        const slider = document.getElementById('t' + (i+1));
+        slider.min = dh_table[i].min;
+        slider.max = dh_table[i].max;
+        slider.value = 0;
+        const l = document.getElementById('l' + (i+1));
+        const h = document.getElementById('h' + (i+1));
+        const o = document.getElementById('o' + (i+1));
+        const a = document.getElementById('a' + (i+1));
+        const r = document.getElementById('r' + (i+1));
+        const d = document.getElementById('d' + (i+1));
+        l.value = dh_table[i].min;
+        h.value = dh_table[i].max;
+        o.value = dh_table[i].theta_offset;
+        a.value = dh_table[i].alpha;
+        r.value = dh_table[i].a;
+        d.value = dh_table[i].d;
+        slider.addEventListener('mousedown', function() {
+            axes[i].children[0].material.color.set(0x009966);
+            axes[i].children[0].material.color.transparent = false;
+            axes[i].children[0].material.opacity = 1;
+        });
+        slider.addEventListener('mouseup', function() {
+            axes[i].children[0].material.color.set(0xff0000);
+            axes[i].children[0].material.color.transparent = true;
+            axes[i].children[0].material.opacity = 0.5;
+        });
+        slider.addEventListener('input', function() {
+            const x = parseFloat(this.value);
+            links[i].rotation.z = THREE.MathUtils.degToRad(dh_table[i].theta_offset + x);
+        });
+        l.addEventListener('input', function() {
+            const x = parseFloat(this.value);
+            dh_table[i].min = x;
+            slider.min = x;
+            if (slider.value < x) {
+                slider.value = x;
+                links[i].rotation.z = THREE.MathUtils.degToRad(dh_table[i].theta_offset + x);
+            }
+            if (slider.max < x) {
+                slider.max = x;
+            }
+        });
+        h.addEventListener('input', function() {
+            const x = parseFloat(this.value);
+            dh_table[i].max = x;
+            slider.max = x;
+            if (slider.value > x) {
+                slider.value = x;
+                const x = parseFloat(x);
+                links[i].rotation.z = THREE.MathUtils.degToRad(dh_table[i].theta_offset + x);
+            }
+            if (slider.min > x) {
+                slider.min = x;
+            }
+        });
+        o.addEventListener('input', function() {
+            const x = parseFloat(this.value);
+            dh_table[i].theta_offset = x;
+            links[i].rotation.z = THREE.MathUtils.degToRad(parseFloat(slider.value) + x);
+        });
+        a.addEventListener('input', function() {
+            const x = parseFloat(this.value);
+            dh_table[i].alpha = parseFloat(x);
+            joints[i].rotation.x = THREE.MathUtils.degToRad(parseFloat(x));
+        });
+        r.addEventListener('input', function() {
+            const x = parseFloat(this.value);
+            dh_table[i].a = parseFloat(x);
+            joints[i].position.x = parseFloat(x);
+        });
+        d.addEventListener('input', function() {
+            const x = parseFloat(this.value);
+            dh_table[i].d = parseFloat(x);
+            links[i].position.z = parseFloat(x);
+        });
+    }
+
+    document.getElementById('resetButton').addEventListener('click', function() {
+        for (let i = 0; i < 5; i++) {
+            const slider = document.getElementById('t' + (i + 1));
+            slider.value = 0;
+            const event = new Event('input');
+            slider.dispatchEvent(event);
+        }
+    });
+    document.getElementById('shareButton').addEventListener('click', function() {
+        const url = new URL(window.location.href);
+        url.searchParams.set('dh', JSON.stringify(dh_table));
+        const popup = document.createElement('div');
+        popup.style.position = 'fixed';
+        popup.style.top = '50%';
+        popup.style.left = '50%';
+        popup.style.transform = 'translate(-50%, -50%)';
+        popup.style.background = 'white';
+        popup.style.padding = '20px';
+        popup.style.border = '1px solid black';
+        popup.style.zIndex = '1000';
+
+        const linkInput = document.createElement('input');
+        linkInput.type = 'text';
+        linkInput.value = url.toString();
+        linkInput.style.width = '100%';
+        linkInput.readOnly = true;
+        popup.appendChild(linkInput);
+
+        const copyButton = document.createElement('button');
+        copyButton.innerText = 'Copy Link';
+        copyButton.style.marginTop = '10px';
+        copyButton.addEventListener('click', function() {
+            linkInput.select();
+            document.execCommand('copy');
+            alert('Link copied to clipboard');
+        });
+        popup.appendChild(copyButton);
+
+        const closeButton = document.createElement('button');
+        closeButton.innerText = 'Close';
+        closeButton.style.marginTop = '10px';
+        closeButton.style.marginLeft = '10px';
+        closeButton.addEventListener('click', function() {
+            document.body.removeChild(popup);
+        });
+        popup.appendChild(closeButton);
+
+        document.body.appendChild(popup);
+
+    });
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const dhParam = urlParams.get('dh');
+    if (dhParam) {
+        try {
+            const parsedDhTable = JSON.parse(dhParam);
+            if (Array.isArray(parsedDhTable) && parsedDhTable.length === dh_table.length) {
+                for (let i = 0; i < dh_table.length; i++) {
+                    dh_table[i] = parsedDhTable[i];
+                    document.getElementById('l' + (i + 1)).value = dh_table[i].min;
+                    document.getElementById('h' + (i + 1)).value = dh_table[i].max;
+                    document.getElementById('o' + (i + 1)).value = dh_table[i].theta_offset;
+                    document.getElementById('a' + (i + 1)).value = dh_table[i].alpha;
+                    document.getElementById('r' + (i + 1)).value = dh_table[i].a;
+                    document.getElementById('d' + (i + 1)).value = dh_table[i].d;
+                    const slider = document.getElementById('t' + (i + 1));
+                    slider.min = dh_table[i].min;
+                    slider.max = dh_table[i].max;
+                    slider.value = 0;
+                    const event = new Event('input');
+                    slider.dispatchEvent(event);
+                    document.getElementById('o' + (i + 1)).dispatchEvent(new Event('input'));
+                    document.getElementById('a' + (i + 1)).dispatchEvent(new Event('input'));
+                    document.getElementById('r' + (i + 1)).dispatchEvent(new Event('input'));
+                    document.getElementById('d' + (i + 1)).dispatchEvent(new Event('input'));
+                }
+            }
+        } catch (e) {
+            console.error('Invalid DH parameter:', e);
+        }
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        renderer.render(scene, camera);
+        axisUpdateFunctions.forEach(fn => fn());
+    }
+    animate();
+</script>
+</body>
+</html>
