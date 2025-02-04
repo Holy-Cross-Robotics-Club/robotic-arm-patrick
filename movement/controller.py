@@ -3,6 +3,7 @@ from simulation import Simulation
 from kinematics import *
 import time as clock
 import sys
+import os
 
 class Servo:
     """Acts as an interface to control and read from the servos.
@@ -34,7 +35,7 @@ class Servo:
         if self.curr_set_pos is None:
             return False
         diff = abs(self.get_position_hex() - self.curr_set_pos)
-        print(f"{self.get_position()} (GET) and {self.curr_set_pos} (SET)")
+        print(f"{self.get_position_hex()} (GET) and {self.curr_set_pos} (SET)")
         return False if diff <= 16 else True
     def set_position_hex(self, pos, time):
         #clock.sleep(0.03)
@@ -58,8 +59,8 @@ class Servo:
 
 class Controller:
     def __init__(self):
-        #self.connection = Connection()
-        self.connection = Simulation()
+        self.connection = Connection()
+        #self.connection = Simulation()
         self.gripper =  Servo(self, jid=6, sid=1)
         self.hand  =    Servo(self, jid=5, sid=2)
         self.wrist  =   Servo(self, jid=4, sid=3)
@@ -85,6 +86,17 @@ if __name__ == "__main__":
     #print("END RESET")
     #clock.sleep(3)
 
+    #arm.base.set_position_radians(0,4)
+    #print(arm.base.get_position_hex())
+    #arm.gripper.set_position_hex(1000, 4)
+    #arm.gripper.set_position_radians(np.pi/2,4)
+    #while arm.gripper.is_moving():
+       # print(arm.gripper.get_position_hex())
+
+    #print(arm.gripper.get_position_hex())    
+    #sys.exit()
+
+
     # t = 0
     # while t <= 1.0:
     #     while arm.wrist.is_moving():
@@ -102,10 +114,8 @@ if __name__ == "__main__":
         h2 = arm.joints[2].hex_from_radians(q[2])
         d3 = q[3] * 180/np.pi
         h3 = arm.joints[3].hex_from_radians(q[3])
-        d5 = q[4] * 180/np.pi
-        h5 = arm.joints[4].hex_from_radians(q[5])
-        return "[ b: %4d or %4.0d°  s: %4d or %4.0d°  e: %4d or %4.0d°  e: %4d or %4.0d°  w: %4d or %4.0d° ]" % (
-                h0, d0, h1, d1, h2, d2, h3, d3, h5, d5)
+        return "[ b: %4d or %4.0d°  s: %4d or %4.0d°  e: %4d or %4.0d°  w: %4d or %4.0d°]" % (
+                h0, d0, h1, d1, h2, d2, h3, d3)
 
     q_current = np.array([joint.get_position_radians() for joint in arm.joints])
     end_pos = calculate_end_pos(q_current)
@@ -182,11 +192,11 @@ if __name__ == "__main__":
             q_new = np.array(q_current) + q_delta
             print(f"target = {qToString(q_new)} end_pos = {cartesianToString(end_pos)} err = {err*1000} mm")
             # print(f"q_delta: {q_delta}")
-            h6 = arm.joints[0].set_position_radians(q_new[0], 5)
-            h5 = arm.joints[1].set_position_radians(q_new[1], 5)
-            h4 = arm.joints[2].set_position_radians(q_new[2], 5)
-            h3 = arm.joints[3].set_position_radians(q_new[3], 5)
-            h2 = arm.joints[4].set_position_radians(q_new[4], 5)
+            #h6 = arm.joints[0].set_position_radians(q_new[0], 5)
+            #h5 = arm.joints[1].set_position_radians(q_new[1], 5)
+            #h4 = arm.joints[2].set_position_radians(q_new[2], 5)
+            #h3 = arm.joints[3].set_position_radians(q_new[3], 5)
+            #h2 = arm.joints[4].set_position_radians(q_new[4], 5)
             # print(f"{h6} {h5} {h4} {h3} {h2}")
 
     #arm.home()

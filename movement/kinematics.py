@@ -19,10 +19,10 @@ pi3 = 3*np.pi
 
 #                   base   shldr   elbow   wrist    hand    grip
 #         joint        1       2       3       4       5       6
-joint_min_clk = [      0,    144,      4,     58,    128,    160 ] # min extent, in clicks
-joint_max_clk = [   1008,    880,    992,    926,    848,    704 ] # max extent, in clicks
-joint_min_rad = [    -pi,  -pi/2,  -pi/2,  -pi/2,    -pi,  -pi/2 ] # min extent, in radians
-joint_max_rad = [     pi,   pi/2,   pi/2,   pi/2,     pi,   pi/2 ] # max extent, in radians
+joint_min_clk = [      0,    144,     10,     70,    120,    155 ] # min extent, in clicks
+joint_max_clk = [   1000,    880,    990,    930,    880,    666 ] # max extent, in clicks
+joint_min_rad = [    -2.1,  -pi/2,  -2.079,  -1.806,    -pi/2,  0 ] # min extent, in radians
+joint_max_rad = [     2.1,   pi/2,   2.079,   1.806,     pi/2,  pi ] # max extent, in radians
 
 #                                    _           , . ,    <-- imaginary end point
 #         grip finger length .......|            \   /
@@ -45,10 +45,10 @@ joint_max_rad = [     pi,   pi/2,   pi/2,   pi/2,     pi,   pi/2 ] # max extent,
 #                                                        y axis is into the page, and
 #                                                        z axis is vertical.
 
-d1 = 0.100  # meters, height of shoulder joint above table or baseplate
-a2 = 0.155  # meters, distance between shoulder joint and elbow joint
-a3 = 0.096  # meters, distance between elbow joint and wrist joint
-d5 = 0.100  # meters, distance between wrist joint and an imaginary point between fingers
+d1 = 0.080  # meters, height of shoulder joint above table or baseplate
+a2 = 0.100  # meters, distance between shoulder joint and elbow joint
+a3 = 0.095  # meters, distance between elbow joint and wrist joint
+d5 = 0.160  # meters, distance between wrist joint and an imaginary point between fingers
 
 # DH Parameter Table
 dh_params = [  # theta_offset,  alpha    a,    d 
@@ -235,7 +235,7 @@ def calculate_joint_angles_delta(q_current, target):
     err = np.linalg.norm(target - end_pos)
     # print(f"Current error: {err*1000} mm from target")
     q_delta = J_pinv @ (target - end_pos)
-    q_delta = (q_delta / np.linalg.norm(q_delta)) * 0.2 * math.sqrt(err)
+    q_delta = (q_delta / np.linalg.norm(q_delta)) * 0.5 * math.sqrt(err) #Adjusted to 0.5 for speed
     
     return q_delta
 

@@ -59,19 +59,19 @@
 const scaleFactor = 25.0;
 function fromMeters(dist) { return dist * scaleFactor; } // arbitrary scale factor for the animation }
 
-const d1 = fromMeters(0.100); //  meters, height of shoulder joint above table or baseplate
-const a2 = fromMeters(0.155); //  meters, distance between shoulder joint and elbow joint
-const a3 = fromMeters(0.096); //  meters, distance between elbow joint and wrist joint
-const d5 = fromMeters(0.100); //  meters, distance between wrist joint and an imaginary point between fingers
+const d1 = fromMeters(0.080); //  meters, height of shoulder joint above table or baseplate
+const a2 = fromMeters(0.100); //  meters, distance between shoulder joint and elbow joint
+const a3 = fromMeters(0.095); //  meters, distance between elbow joint and wrist joint
+const d5 = fromMeters(0.160); //  meters, distance between wrist joint and an imaginary point between fingers
 
 let axes = [ 'grip', 'hand', 'wrist', 'elbow', 'shoulder', 'base' ];
 let joints = {
-    grip:     { id: 1, name: "grip",      cmin: 160, cmax:  704, cini: 432,  dmin:  -90.0, dmax:  90.0, doff: 0  },
-    hand:     { id: 2, name: "hand",      cmin: 128, cmax:  848, cini: 488,  dmin: -180.0, dmax: 180.0, doff: 0  },
-    wrist:    { id: 3, name: "wrist",     cmin:  58, cmax:  926, cini: 492,  dmin:  -90.0, dmax:  90.0, doff: 0  },
-    elbow:    { id: 4, name: "elbow",     cmin:   4, cmax:  992, cini: 498,  dmin:  -90.0, dmax:  90.0, doff: 0  },
-    shoulder: { id: 5, name: "shoulder",  cmin: 144, cmax:  880, cini: 512,  dmin:  -90.0, dmax:  90.0, doff: 0  },
-    base:     { id: 6, name: "base",      cmin:   0, cmax: 1008, cini: 504,  dmin: -180.0, dmax: 180.0, doff: 0  },
+    grip:     { id: 1, name: "grip",      cmin: 155, cmax:  666, cini: 432,  dmin:   0,       dmax:  180,     doff: 0  },
+    hand:     { id: 2, name: "hand",      cmin: 120, cmax:  880, cini: 488,  dmin:  -90.0,    dmax:  90.0,    doff: 0  },
+    wrist:    { id: 3, name: "wrist",     cmin:  70, cmax:  930, cini: 492,  dmin:  -103.476, dmax:  103.476, doff: 0  },
+    elbow:    { id: 4, name: "elbow",     cmin:  10, cmax:  990, cini: 498,  dmin:  -119.118, dmax:  119.118, doff: 0  },
+    shoulder: { id: 5, name: "shoulder",  cmin: 144, cmax:  880, cini: 512,  dmin:  -90.0,    dmax:  90.0,    doff: 0  },
+    base:     { id: 6, name: "base",      cmin:   0, cmax: 1000, cini: 504,  dmin:  -120.321, dmax:  120.321, doff: 0  },
 };
 
 
