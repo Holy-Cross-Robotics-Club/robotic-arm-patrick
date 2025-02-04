@@ -36,6 +36,7 @@ class Servo:
             return False
         diff = abs(self.get_position_hex() - self.curr_set_pos)
         print(f"{self.get_position_hex()} (GET) and {self.curr_set_pos} (SET)")
+        print(f"{self.get_position_hex()} (GET) and {self.curr_set_pos} (SET)")
         return False if diff <= 16 else True
     def set_position_hex(self, pos, time):
         #clock.sleep(0.03)
@@ -82,9 +83,6 @@ if __name__ == "__main__":
     # test code
     arm = Controller()
     arm.connect()
-    #arm.reset_servos()
-    #print("END RESET")
-    #clock.sleep(3)
 
     #arm.base.set_position_radians(0,4)
     #print(arm.base.get_position_hex())
@@ -116,6 +114,29 @@ if __name__ == "__main__":
         h3 = arm.joints[3].hex_from_radians(q[3])
         return "[ b: %4d or %4.0d°  s: %4d or %4.0d°  e: %4d or %4.0d°  w: %4d or %4.0d°]" % (
                 h0, d0, h1, d1, h2, d2, h3, d3)
+
+    # THIS LOOP IS FOR TESTING, to check if our radians-to-clicks and motor
+    # numbers are accurate; comment the whole thing out to use the kinematics
+    # instead
+    while True:
+        while arm.wrist.is_moving():
+            #q_current = np.array([joint.get_position_radians() for joint in arm.joints])
+            #end_pos = calculate_end_pos(q_current)
+            #print(f"  servos = {qToString(q_current)} so end_pos = {cartesianToString(end_pos)}")
+            print("moving")
+            clock.sleep(0.5)
+            continue
+        deg = float(input("Type an angle in degrees: "))
+        rad = deg * np.pi / 180
+        print(f"Convert to Radian = {rad}")
+        print(f"Set joint radians to {rad}")
+        #arm.base.set_position_radians(rad, 8)
+        #arm.shoulder.set_position_radians(rad, 8)
+        #arm.elbow.set_position_radians(rad, 8)
+        arm.wrist.set_position_radians(rad, 8)
+        # arm.hand.set_position_radians(rad, 8)
+        # arm.gripper.set_position_radians(rad, 8)
+    
 
     q_current = np.array([joint.get_position_radians() for joint in arm.joints])
     end_pos = calculate_end_pos(q_current)
