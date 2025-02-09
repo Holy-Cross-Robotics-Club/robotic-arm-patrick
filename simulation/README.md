@@ -30,7 +30,7 @@ Simulation Utilities
 
 2. Run the server: `./server.py`
 3. Open the interactive page at the URL it prints, e.g.
-   [http://localhost:8000](http://localhost:8000)
+   [http://localhost:8000](http://localhost:8000/arm.html)
 4. Either use the interactive page to move the arm. Or, in a separate command
    line window, run the kinematics controller (after having changed it to
    connect to the simulated arm using simulation.py), e.g.
