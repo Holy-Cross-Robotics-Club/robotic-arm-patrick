@@ -518,6 +518,19 @@ function animate() {
 }
 animate();
 
+// Toggle button
+const controlDiv = document.getElementById("controls");
+const toggleButton = document.getElementById("toggle-button");
+toggleButton.addEventListener("click", function () {
+    if (controlDiv.classList.contains("collapsed")) {
+        toggleButton.innerHTML = "[-]";
+        controlDiv.classList.remove("collapsed");
+    } else {
+        toggleButton.innerHTML = "[+]";
+        controlDiv.classList.add("collapsed");
+    }
+});
+
 // Clear button
 document.getElementById('clearButton').onclick = () => {
     points.length = 0;  // Clear array

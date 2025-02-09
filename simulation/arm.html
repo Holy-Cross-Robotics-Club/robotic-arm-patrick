@@ -6,7 +6,7 @@
     <link rel="stylesheet" href="arm.css">
 </head>
 <body>
-    <div id="controls">
+    <div id="controls" class="collapsed">
         <div class="control-group"><label>    Base (6):</label><input type="range" id="base">     <span id="baseValue">initializing</span> </div>
         <div class="control-group"><label>Shoulder (5):</label><input type="range" id="shoulder"> <span id="shoulderValue">initializing</span> </div>
         <div class="control-group"><label>   Elbow (4):</label><input type="range" id="elbow">    <span id="elbowValue">initializing</span> </div>
@@ -16,6 +16,7 @@
         <button id="clearButton">Clear Path</button>
         <button id="homeButton">Home</button>
     </div>
+    <button id="toggle-button">[+]</button>
     <div id="coords" class="coords">Coordinates</div>
 
     <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
