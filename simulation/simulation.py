@@ -1,4 +1,5 @@
 import socket
+import sys
 
 # The backend python/html/js simulation is contacted via TCP at this address.
 arm_addr = ('localhost', 8002)
@@ -83,14 +84,24 @@ class Simulation:
     """
     def __init__(self):
         self.connection = None
-    def connect(self, pid, vid):
+    def connect(self, pid, vid, fatal=True):
         try:
             self.connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.connection.connect(arm_addr)
             print(f"Successfully conntected to simulation at {arm_addr}.")
         except:
-            self.connection = None
-            raise AssertionError(f"Could not connect to simulation at {arm_addr}.")
+            if fatal:
+                print("ERROR: Could not connect to browser-based simulation.")
+                print("Are you sure you are running the simulation server?")
+                print("To start the simulator:")
+                print("  1. open a new terminal window")
+                print("  2. change into the robotic-arm-patrick directory")
+                print("  3. activate the virtual env, for example: source ~/xarm-python-venv/bin/activate")
+                print("  4. run the server, for example: ./simulation/server.py")
+                sys.exit(1)
+            else:
+                self.connection = None
+                raise ConnectionError(f"Could not connect to simulation at {arm_addr}.")
     def close(self):
         if self.connection is None: return
         self.connection.close()

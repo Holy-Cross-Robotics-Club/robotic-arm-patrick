@@ -1,4 +1,4 @@
-from connection import Connection
+from connection import Connection, DeadEnd
 from simulation import Simulation
 from kinematics import *
 import time as clock
@@ -6,17 +6,19 @@ import sys
 
 class Servo:
     """Acts as an interface to control and read from the servos.
-    Works with connection.py to parse requests to HID-USB format.
+    Works with connection.py and/or simulation.py to parse requests to HID-USB format.
 
     TO AVOID: too many coordinate conversions.
     The kinematics needs radians: floating point numbers within some range like 0 to pi.
     The robot requires clicks (or "hex"): integers within some range like 150 to 950.
     It's okay to print degrees to the console, but don't calculate with it.
     """
-    def __init__(self, controller, jid, sid):
+    def __init__(self, controller, jid, sid, name, default_time=2):
         self.position_range = [None, None]
         self.jid = jid
         self.sid = sid
+        self.name = name
+        self.default_time = default_time
         self.position_range = [joint_min_clk[jid-1], joint_max_clk[jid-1]]
         self.radian_range =  [joint_min_rad[jid-1], joint_max_rad[jid-1]]
         self.__is_moving = False
@@ -25,6 +27,7 @@ class Servo:
         self.curr_set_pos = None
     def get_position_hex(self):
         self.controller.connection.write_out([85, 85, 4, 21, 1, self.sid])
+        self.controller.vieweronly.write_out([85, 85, 4, 21, 1, self.sid])
         result = self.controller.connection.read_in(21, 6)
         hex = (result[3] * 256 + result[2]) # returns hex
         return hex
@@ -36,12 +39,15 @@ class Servo:
         diff = abs(self.get_position_hex() - self.curr_set_pos)
         print(f"{self.get_position_hex()} (GET) and {self.curr_set_pos} (SET)")
         return False if diff <= 16 else True
-    def set_position_hex(self, pos, time):
+    def set_position_hex(self, pos, time=None):
         #clock.sleep(0.03)
         self.curr_set_pos = pos
+        if time is None:
+            time = self.default_time
         # print(f"Servo {self.sid}: Set position is now {self.curr_set_pos}")
         self.controller.connection.write_out([85, 85, 8, 3, 1, 0, time, self.sid, (pos&0xff), ((pos>>8)&0xff)])
-    def set_position_radians(self, rad, time):
+        self.controller.vieweronly.write_out([85, 85, 8, 3, 1, 0, time, self.sid, (pos&0xff), ((pos>>8)&0xff)])
+    def set_position_radians(self, rad, time=None):
         hex = self.hex_from_radians(rad)
         self.set_position_hex(hex, time)
         return hex
@@ -57,72 +63,62 @@ class Servo:
         return hex
 
 class Controller:
-    def __init__(self):
-        self.connection = Connection()
-        #self.connection = Simulation()
-        self.gripper =  Servo(self, jid=6, sid=1)
-        self.hand  =    Servo(self, jid=5, sid=2)
-        self.wrist  =   Servo(self, jid=4, sid=3)
-        self.elbow =    Servo(self, jid=3, sid=4)
-        self.shoulder = Servo(self, jid=2, sid=5)
-        self.base =     Servo(self, jid=1, sid=6)
+    def __init__(self, use_arm=True, use_sim=False):
+        if use_arm and use_sim:
+            # If both the arm and the simulator are enabled, use the arm for the
+            # primary connection, and the simulation in view-only mode.
+            self.connection = Connection()
+            self.vieweronly = Simulation()
+        elif use_arm:
+            # If using the arm but no simulator, disable the view-only mode.
+            self.connection = Connection()
+            self.vieweronly = DeadEnd()
+        elif use_sim:
+            # If using the simulator but no arm, the simulator is used as the
+            # primary connection, and we disable the view-only mode.
+            self.connection = Simulation()
+            self.vieweronly = DeadEnd()
+        else:
+            raise Exception("Either use_arm or use_arm, or both, must be True.")
+        self.gripper =  Servo(self, jid=6, sid=1, default_time=2, name="gripper")
+        self.hand  =    Servo(self, jid=5, sid=2, default_time=4, name="hand")
+        self.wrist  =   Servo(self, jid=4, sid=3, default_time=8, name="wrist")
+        self.elbow =    Servo(self, jid=3, sid=4, default_time=8, name="elbow")
+        self.shoulder = Servo(self, jid=2, sid=5, default_time=8, name="shoulder")
+        self.base =     Servo(self, jid=1, sid=6, default_time=8, name="base")
         self.joints = [ self.base, self.shoulder, self.elbow, self.wrist, self.hand, self.gripper ]
         self.product_id = 0x5750
         self.vendor_id = 0x0483
     def connect(self):
         self.connection.connect(self.product_id, self.vendor_id)
+        self.vieweronly.connect(self.product_id, self.vendor_id)
     def disconnect(self):
         self.connection.close()
+        self.vieweronly.close()
     def home(self):
         for joint in self.joints:
             joint.set_position_radians(0, 5)
+    def qToString(self, q):
+        """ Takes an nparray of radian angles, returns a nice string showing both hex and degrees """
+        d0 = q[0] * 180/np.pi
+        h0 = self.joints[0].hex_from_radians(q[0])
+        d1 = q[1] * 180/np.pi
+        h1 = self.joints[1].hex_from_radians(q[1])
+        d2 = q[2] * 180/np.pi
+        h2 = self.joints[2].hex_from_radians(q[2])
+        d3 = q[3] * 180/np.pi
+        h3 = self.joints[3].hex_from_radians(q[3])
+        return "[ base = %4d = %4.0d°  shoulder = %4d = %4.0d°  elbow = %4d = %4.0d°  wrist = %4d = %4.0d° ]" % (
+                h0, d0, h1, d1, h2, d2, h3, d3)
 
 if __name__ == "__main__":
     # test code
-    arm = Controller()
+    arm = Controller(use_arm=True, use_sim=True)
     arm.connect()
-
-    def qToString(q):
-        """ Takes an nparray of radian angles, returns a nice string showing both hex and degrees """
-        d0 = q[0] * 180/np.pi
-        h0 = arm.joints[0].hex_from_radians(q[0])
-        d1 = q[1] * 180/np.pi
-        h1 = arm.joints[1].hex_from_radians(q[1])
-        d2 = q[2] * 180/np.pi
-        h2 = arm.joints[2].hex_from_radians(q[2])
-        d3 = q[3] * 180/np.pi
-        h3 = arm.joints[3].hex_from_radians(q[3])
-        d5 = q[4] * 180/np.pi
-        h5 = arm.joints[4].hex_from_radians(q[5])
-        return "[ b: %4d or %4.0d°  s: %4d or %4.0d°  e: %4d or %4.0d°  e: %4d or %4.0d°  w: %4d or %4.0d° ]" % (
-                h0, d0, h1, d1, h2, d2, h3, d3, h5, d5)
-
-    # THIS LOOP IS FOR TESTING, to check if our radians-to-clicks and motor
-    # numbers are accurate; comment the whole thing out to use the kinematics
-    # instead
-    while True:
-        while arm.wrist.is_moving():
-            #q_current = np.array([joint.get_position_radians() for joint in arm.joints])
-            #end_pos = calculate_end_pos(q_current)
-            #print(f"  servos = {qToString(q_current)} so end_pos = {cartesianToString(end_pos)}")
-            print("moving")
-            clock.sleep(0.5)
-            continue
-        deg = float(input("Type an angle in degrees: "))
-        rad = deg * np.pi / 180
-        print(f"Convert to Radian = {rad}")
-        print(f"Set joint radians to {rad}")
-        #arm.base.set_position_radians(rad, 8)
-        #arm.shoulder.set_position_radians(rad, 8)
-        #arm.elbow.set_position_radians(rad, 8)
-        arm.wrist.set_position_radians(rad, 8)
-        # arm.hand.set_position_radians(rad, 8)
-        # arm.gripper.set_position_radians(rad, 8)
-    
 
     q_current = np.array([joint.get_position_radians() for joint in arm.joints])
     end_pos = calculate_end_pos(q_current)
-    print(f"servos = {qToString(q_current)} so end_pos = {cartesianToString(end_pos)}")
+    print(f"servos = {arm.qToString(q_current)} so end_pos = {cartesianToString(end_pos)}")
 
     dest_coords = None
     # - If called with no parameters, it tries to move to a hardcoded position.
@@ -169,7 +165,7 @@ if __name__ == "__main__":
         clock.sleep(0.1)
         q_current = np.array([joint.get_position_radians() for joint in arm.joints])
         end_pos = calculate_end_pos(q_current)
-        # print(f"servos = {qToString(q_current)} so end_pos = {cartesianToString(end_pos)}")
+        # print(f"servos = {arm.qToString(q_current)} so end_pos = {cartesianToString(end_pos)}")
         if dest_coords:
             err = np.linalg.norm(cart_target - end_pos)
             if err < 0.001:
@@ -193,14 +189,7 @@ if __name__ == "__main__":
             preverr = err
             q_delta = calculate_joint_angles_delta(q_current, cart_target)
             q_new = np.array(q_current) + q_delta
-            print(f"target = {qToString(q_new)} end_pos = {cartesianToString(end_pos)} err = {err*1000} mm")
-            # print(f"q_delta: {q_delta}")
-            h6 = arm.joints[0].set_position_radians(q_new[0], 5)
-            h5 = arm.joints[1].set_position_radians(q_new[1], 5)
-            h4 = arm.joints[2].set_position_radians(q_new[2], 5)
-            h3 = arm.joints[3].set_position_radians(q_new[3], 5)
-            h2 = arm.joints[4].set_position_radians(q_new[4], 5)
-            # print(f"{h6} {h5} {h4} {h3} {h2}")
+            print(f"target = {arm.qToString(q_new)} end_pos = {cartesianToString(end_pos)} err = {err*1000} mm")
 
     #arm.home()
     arm.disconnect()

@@ -28,3 +28,16 @@ class Connection:
         if data[0] == 85 and data[1] == 85 and data[2] == num_bytes and data[3] == cmd:
             return data[4:]
         else: return None
+
+class DeadEnd:
+    """ An alternative implementation of Connection that does nothing. """
+    def __init__(self):
+        pass
+    def connect(self, pid, vid):
+        pass
+    def close(self):
+        pass
+    def write_out(self, m):
+        pass
+    def read_in(self, cmd, num_bytes):
+        return None

@@ -10,6 +10,7 @@ import sys
 import os
 import traceback
 import time
+import webbrowser
 from simulation import async_recvmsg, async_sendmsg
 
 debug = False
@@ -217,15 +218,13 @@ async def handle_arm_connection(reader, writer):
         print(f"Closed arm control connection to {writer.get_extra_info('peername')}")
 
 # handle http file requests
-async def handle_file(request):
-    filename = request.match_info['filename']
-    if not os.path.isfile(filename):
+async def handle_file(request, webdir, filename=None):
+    if filename is None:
+        filename = request.match_info['filename']
+    filepath = os.path.join(webdir, filename)
+    if not os.path.isfile(filepath):
         return web.Response(status=404)
-    return web.FileResponse(filename)
-
-app = web.Application()
-app.router.add_get('/', lambda r: web.FileResponse('index.html'))
-app.router.add_get('/{filename}', handle_file)
+    return web.FileResponse(filepath)
 
 async def shutdown():
     global running, http_runner, ws_server, arm_server
@@ -245,26 +244,36 @@ async def shutdown():
         loop = asyncio.get_running_loop()
         loop.stop()
 
-async def main():
+async def main(webdir):
     global running, http_runner, ws_server, arm_server
+
+    app = web.Application()
+    app.router.add_get('/', lambda r: handle_file(r, webdir, 'arm.html'))
+    app.router.add_get('/{filename}', lambda r: handle_file(r, webdir))
 
     # (1) Start http server
     http_runner = web.AppRunner(app)
     await http_runner.setup()
     site = web.TCPSite(http_runner, 'localhost', http_port)
     await site.start()
-    print(f"HTTP server running on http://localhost:{http_port}")
+    arm_url = f"http://localhost:{http_port}/arm.html"
+    print(f"HTTP server running on ${arm_url}")
 
     # (2) Start websocket server
     ws_server = await websockets.serve(ws_handler, "", ws_port)
-    print(f"WebSocket server running on ws://localhost:{ws_port}")
+    # print(f"WebSocket server running on ws://localhost:{ws_port}")
 
     # (3) Start arm control server
     arm_server = await asyncio.start_server(handle_arm_connection, 'localhost', arm_port)
-    print(f"xArm Control server running on localhost:{arm_port}")
+    # print(f"xArm Control server running on localhost:{arm_port}")
 
     # (4) Start physics loop
     asyncio.create_task(physics_loop())
+
+    webbrowser.open(arm_url)
+
+    print("Simulation is ready, should be open in browser. Open above URL if not.")
+    print("Leave this running, or hit Control-C to stop the simulation.")
 
     # Keep running everything
     try:
@@ -278,9 +287,11 @@ def signal_handler(signum, frame):
     loop.create_task(shutdown())
 
 if __name__ == "__main__":
+    webdir = os.path.dirname(os.path.realpath(__file__))
+
     signal.signal(signal.SIGINT, signal_handler)
     try:
-        asyncio.run(main())
+        asyncio.run(main(webdir))
     except:
         if running:
             traceback.print_exc()
