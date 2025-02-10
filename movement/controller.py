@@ -37,7 +37,7 @@ class Servo:
         if self.curr_set_pos is None:
             return False
         diff = abs(self.get_position_hex() - self.curr_set_pos)
-        print(f"{self.get_position_hex()} (GET) and {self.curr_set_pos} (SET)")
+        print(f"DEBUG: current={self.get_position_hex()} target={self.curr_set_pos}")
         return False if diff <= 16 else True
     def set_position_hex(self, pos, time=None):
         #clock.sleep(0.03)
@@ -98,6 +98,16 @@ class Controller:
     def home(self):
         for joint in self.joints:
             joint.set_position_radians(0, 5)
+    def q_current_radians(self):
+        """ Returns a numpy array with radian angles of all joints """
+        return np.array([joint.get_position_radians() for joint in self.joints])
+    def qToDegreeString(self, q):
+        """ Takes an nparray of radian angles, returns a nice string showing degrees """
+        d0 = q[0] * 180/np.pi
+        d1 = q[1] * 180/np.pi
+        d2 = q[2] * 180/np.pi
+        d3 = q[3] * 180/np.pi
+        return "[ base = %4.0d°  shoulder = %4.0d°  elbow = %4.0d°  wrist = %4.0d° ]" % (d0, d1, d2, d3)
     def qToString(self, q):
         """ Takes an nparray of radian angles, returns a nice string showing both hex and degrees """
         d0 = q[0] * 180/np.pi
@@ -162,7 +172,7 @@ if __name__ == "__main__":
     stall = 0
     attempted_reset = False
     while True:
-        clock.sleep(0.1)
+        clock.sleep(1.0)
         q_current = np.array([joint.get_position_radians() for joint in arm.joints])
         end_pos = calculate_end_pos(q_current)
         # print(f"servos = {arm.qToString(q_current)} so end_pos = {cartesianToString(end_pos)}")
@@ -187,9 +197,14 @@ if __name__ == "__main__":
                 print(f"progress stalled (attemped {stall} of 20)...")
                 stall += 1
             preverr = err
-            q_delta = calculate_joint_angles_delta(q_current, cart_target)
+            q_delta, err = calculate_joint_angles_delta(q_current, cart_target, step_size=10.0) # larger step
             q_new = np.array(q_current) + q_delta
             print(f"target = {arm.qToString(q_new)} end_pos = {cartesianToString(end_pos)} err = {err*1000} mm")
+            arm.joints[0].set_position_radians(q_new[0], 1) # 2 is a speed parameter for motors
+            arm.joints[1].set_position_radians(q_new[1], 1) # but there is also step_size above
+            arm.joints[2].set_position_radians(q_new[2], 1) # for kinematic model
+            arm.joints[3].set_position_radians(q_new[3], 1)
+            # arm.joints[4].set_position_radians(q_new[4], 2)
 
     #arm.home()
     arm.disconnect()

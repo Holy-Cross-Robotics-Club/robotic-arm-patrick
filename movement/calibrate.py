@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+# This moves only one joint at a time, allowing you to repeatedly specify an
+# angle (in degrees) to test the calibration of that joint.
+
 from controller import Controller
 from connection import Connection
 from simulation import Simulation
@@ -12,7 +15,6 @@ if __name__ == "__main__":
     use_sim = False
     use_arm = False
     joint_arg = None
-    action = None
 
     for arg in sys.argv[1:]:
         if arg == "--sim":
@@ -35,12 +37,19 @@ if __name__ == "__main__":
         elif arg in [ "--joint=5", "--servo=1", "--gripper" ]:
             joint_arg = "gripper"
         elif arg in ["--help", "-?"]:
-            print("Usage: ./main.py [options]")
+            print("Usage: ./calibrate.py [options]")
             print("Options:")
             print("  --sim          ... open the browser-based simulation")
             print("  --arm          ... connect to the physical robot arm")
             print("  --both         ... use both the simulation and physical arm")
-            print("  --single       ... test a single servo")
+            print("  --joint=N      ... control joint N, numbered 0 to 5 from base to gripper")
+            print("  --servo=S      ... control servo S, numbered 6 to 1 from base to gripper")
+            print("  --base         ... control joint 0, servo 6, the base")
+            print("  --shoulder     ... control joint 1, servo 5, the shoulder")
+            print("  --elbow        ... control joint 2, servo 4, the elbow")
+            print("  --wrist        ... control joint 3, servo 3, the wrist")
+            print("  --hand         ... control joint 4, servo 2, the hand")
+            print("  --gripper      ... control joint 5, servo 1, the gripper")
             print("  --help, -?     ... show this message")
         elif arg.startswith("-"):
             print(f"Unrecognized option '{arg}'. Try '--help' instead.")
@@ -104,8 +113,7 @@ if __name__ == "__main__":
             #q_current = np.array([joint.get_position_radians() for joint in arm.joints])
             #end_pos = calculate_end_pos(q_current)
             #print(f"  servos = {arm.qToString(q_current)} so end_pos = {cartesianToString(end_pos)}")
-            print("joint is still moving")
-            clock.sleep(0.5)
+            clock.sleep(0.1)
             continue
         deg = float(input(f"Type an angle for {joint.name} in degrees: "))
         rad = deg * np.pi / 180

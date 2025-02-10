@@ -203,7 +203,7 @@ def anthroarm_diff(q):
 def cartesianToString(pos):
     return "[ x: %4.1f mm, y: %4.1f mm, z: %4.1f mm ]" % ( pos[0]*1000, pos[1]*1000, pos[2]*1000 )
 
-def calculate_joint_angles_delta(q_current, target):
+def calculate_joint_angles_delta(q_current, target, step_size=0.175):
     """
     Calculate the joint angle changes required for a desired end-effector change.
     
@@ -234,10 +234,20 @@ def calculate_joint_angles_delta(q_current, target):
    
     err = np.linalg.norm(target - end_pos)
     # print(f"Current error: {err*1000} mm from target")
+    # If error is above 30 mm (0.030 m), we want to move by the full step_size
+    # in radians. As error falls below 30 mm, and approaches zero, we want
+    # to decrease the movement amount. So:
+    #  when err < 0.030 then adjust by sqrt(err/0.030)
+    #  when err >= 0.030 then adjust by 1.0
+    step_size_adjusted = step_size * min(1.0, math.sqrt(err/0.030))
     q_delta = J_pinv @ (target - end_pos)
-    q_delta = (q_delta / np.linalg.norm(q_delta)) * 0.5 * math.sqrt(err) #Adjusted to 0.5 from 0.2 for speed
+    q_delta = (q_delta / np.linalg.norm(q_delta)) * step_size_adjusted
+
+    print(f"err = %.2f mm from target position" % (err*1000))
+    print("step size = approx %.2f degrees total across all servos" % (step_size_adjusted * pi / 180.0))
+    print(f"q_delta = {q_delta}")
     
-    return q_delta
+    return q_delta, err
 
 def nearest_reachable_point(target):
     """
