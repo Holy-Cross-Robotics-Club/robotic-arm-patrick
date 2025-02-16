@@ -13,14 +13,14 @@ class Servo:
     The robot requires clicks (or "hex"): integers within some range like 150 to 950.
     It's okay to print degrees to the console, but don't calculate with it.
     """
-    def __init__(self, controller, jid, sid, name, default_time=2):
+    def __init__(self, controller, jid, sid, name, default_time=200):
         self.position_range = [None, None]
         self.jid = jid
         self.sid = sid
         self.name = name
         self.default_time = default_time
-        self.position_range = [joint_min_clk[jid-1], joint_max_clk[jid-1]]
-        self.radian_range =  [joint_min_rad[jid-1], joint_max_rad[jid-1]]
+        self.position_range = [joint_min_clk[jid], joint_max_clk[jid]]
+        self.radian_range =  [joint_min_rad[jid], joint_max_rad[jid]]
         self.__is_moving = False
         self.__target_position = None
         self.controller = controller
@@ -37,16 +37,20 @@ class Servo:
         if self.curr_set_pos is None:
             return False
         diff = abs(self.get_position_hex() - self.curr_set_pos)
-        print(f"DEBUG: current={self.get_position_hex()} target={self.curr_set_pos}")
+        print(f"DEBUG: joint={self.jid} {self.name} current={self.get_position_hex()} target={self.curr_set_pos}")
         return False if diff <= 16 else True
     def set_position_hex(self, pos, time=None):
-        #clock.sleep(0.03)
         self.curr_set_pos = pos
         if time is None:
             time = self.default_time
-        # print(f"Servo {self.sid}: Set position is now {self.curr_set_pos}")
-        self.controller.connection.write_out([85, 85, 8, 3, 1, 0, time, self.sid, (pos&0xff), ((pos>>8)&0xff)])
-        self.controller.vieweronly.write_out([85, 85, 8, 3, 1, 0, time, self.sid, (pos&0xff), ((pos>>8)&0xff)])
+        time_ms = max(1, min(65535, int(time)))
+        print(f"DEBUG: joint={self.jid} sid={self.sid} {self.name} current={self.get_position_hex()} target={self.curr_set_pos} time={time_ms}")
+        # IMPORTANT: Whenever we call get_position, then immediately try to write data to the arm,
+        # the second command seems to fail. There needs to be a 10ms or larger delay. This
+        # doesn't seem to be documented anywhere.
+        clock.sleep(0.020) # 20ms delay, sending move command after reading position fails if done too quickly??
+        self.controller.connection.write_out([85, 85, 8, 3, 1, (time_ms&0xff), ((time_ms>>8)&0xff), self.sid, (pos&0xff), ((pos>>8)&0xff)])
+        self.controller.vieweronly.write_out([85, 85, 8, 3, 1, (time_ms&0xff), ((time_ms>>8)&0xff), self.sid, (pos&0xff), ((pos>>8)&0xff)])
     def set_position_radians(self, rad, time=None):
         hex = self.hex_from_radians(rad)
         self.set_position_hex(hex, time)
@@ -80,12 +84,12 @@ class Controller:
             self.vieweronly = DeadEnd()
         else:
             raise Exception("Either use_arm or use_arm, or both, must be True.")
-        self.gripper =  Servo(self, jid=6, sid=1, default_time=2, name="gripper")
-        self.hand  =    Servo(self, jid=5, sid=2, default_time=4, name="hand")
-        self.wrist  =   Servo(self, jid=4, sid=3, default_time=8, name="wrist")
-        self.elbow =    Servo(self, jid=3, sid=4, default_time=8, name="elbow")
-        self.shoulder = Servo(self, jid=2, sid=5, default_time=8, name="shoulder")
-        self.base =     Servo(self, jid=1, sid=6, default_time=8, name="base")
+        self.gripper =  Servo(self, jid=5, sid=1, default_time=200, name="gripper")
+        self.hand  =    Servo(self, jid=4, sid=2, default_time=400, name="hand")
+        self.wrist  =   Servo(self, jid=3, sid=3, default_time=800, name="wrist")
+        self.elbow =    Servo(self, jid=2, sid=4, default_time=800, name="elbow")
+        self.shoulder = Servo(self, jid=1, sid=5, default_time=800, name="shoulder")
+        self.base =     Servo(self, jid=0, sid=6, default_time=800, name="base")
         self.joints = [ self.base, self.shoulder, self.elbow, self.wrist, self.hand, self.gripper ]
         self.product_id = 0x5750
         self.vendor_id = 0x0483
@@ -121,90 +125,3 @@ class Controller:
         return "[ base = %4d = %4.0d°  shoulder = %4d = %4.0d°  elbow = %4d = %4.0d°  wrist = %4d = %4.0d° ]" % (
                 h0, d0, h1, d1, h2, d2, h3, d3)
 
-if __name__ == "__main__":
-    # test code
-    arm = Controller(use_arm=True, use_sim=True)
-    arm.connect()
-
-    q_current = np.array([joint.get_position_radians() for joint in arm.joints])
-    end_pos = calculate_end_pos(q_current)
-    print(f"servos = {arm.qToString(q_current)} so end_pos = {cartesianToString(end_pos)}")
-
-    dest_coords = None
-    # - If called with no parameters, it tries to move to a hardcoded position.
-    # - If called with parameters like "goto 0.2 0.1 0.3" it will try to move to
-    #   those coordinates. For any of the coordinates, you can use '_' to mean
-    #   'current position'.
-    # - If called with parameters like "move 0.0 0.0 -0.1" it will try to move
-    #   relative to the current coordinates by the given deltas. here, '_' is
-    #   the same as 0.0 as a delta.
-    if len(sys.argv) == 1:
-        dest_coords = [0.1, 0.1, 0.2]
-    elif len(sys.argv) == 5 and sys.argv[1] == "goto":
-        x = end_pos[0] if sys.argv[2] == '_' else float(sys.argv[2])
-        y = end_pos[1] if sys.argv[3] == '_' else float(sys.argv[3])
-        z = end_pos[2] if sys.argv[4] == '_' else float(sys.argv[4])
-        dest_coords = [x, y, z]
-    elif len(sys.argv) == 5 and sys.argv[1] == "move":
-        dx = 0.0 if sys.argv[2] == '_' else float(sys.argv[2])
-        dy = 0.0 if sys.argv[3] == '_' else float(sys.argv[3])
-        dz = 0.0 if sys.argv[4] == '_' else float(sys.argv[4])
-        dest_coords = [end_pos[0]+dx, end_pos[1]+dy, end_pos[2]+dz]
-    elif len(sys.argv) == 2 and sys.argv[1] == "hold":
-        dest_coords = None
-    else:
-        print("Bad arguments. Try these examples:")
-        print("  goto 0.1 0.1 0.25   # go to the specified x,y,z coordinates ")
-        print("  goto _ _ 0.25       # go to the specified z coordinate, leave x and y alone")
-        print("  move 0.1 _ -0.05    # move by the specfied dx and dz, leave y alone")
-        print("  hold                # just monitor the current position")
-        sys.exit(0)
-
-    if dest_coords:
-        cart_target = np.transpose(np.array(dest_coords))
-        nearby, moved = nearest_reachable_point(cart_target)
-        if moved:
-            print(f"NOTE: {cartesianToString(cart_target)} is outside the reach of the arm.")
-            print(f"NOTE: {cartesianToString(nearby)} will be targetted instead.")
-            cart_target = nearby
-
-    preverr = 100
-    stall = 0
-    attempted_reset = False
-    while True:
-        clock.sleep(1.0)
-        q_current = np.array([joint.get_position_radians() for joint in arm.joints])
-        end_pos = calculate_end_pos(q_current)
-        # print(f"servos = {arm.qToString(q_current)} so end_pos = {cartesianToString(end_pos)}")
-        if dest_coords:
-            err = np.linalg.norm(cart_target - end_pos)
-            if err < 0.001:
-                print(f"reached target position, err = {err*1000} mm")
-                break
-            elif err < preverr:
-                stall = 0
-            elif stall > 20:
-                if attempted_reset:
-                    print("no progress after a reset and 20 more tries, giving up")
-                    break
-                else:
-                    print("no progress after 20 tries, resetting to home and trying again")
-                    arm.home()
-                    clock.sleep(2)
-                    preverr = 100
-                    continue
-            else:
-                print(f"progress stalled (attemped {stall} of 20)...")
-                stall += 1
-            preverr = err
-            q_delta, err = calculate_joint_angles_delta(q_current, cart_target, step_size=10.0) # larger step
-            q_new = np.array(q_current) + q_delta
-            print(f"target = {arm.qToString(q_new)} end_pos = {cartesianToString(end_pos)} err = {err*1000} mm")
-            arm.joints[0].set_position_radians(q_new[0], 1) # 2 is a speed parameter for motors
-            arm.joints[1].set_position_radians(q_new[1], 1) # but there is also step_size above
-            arm.joints[2].set_position_radians(q_new[2], 1) # for kinematic model
-            arm.joints[3].set_position_radians(q_new[3], 1)
-            # arm.joints[4].set_position_radians(q_new[4], 2)
-
-    #arm.home()
-    arm.disconnect()

@@ -17,12 +17,13 @@ pi3 = 3*np.pi
 # NOTE: These are from a mix of sources and should be verified against the
 # physical arm. In particular, the ranges are not actually symmetric at all.
 
-#                   base   shldr   elbow   wrist    hand    grip
-#         joint        1       2       3       4       5       6
-joint_min_clk = [      0,    144,     10,     70,    120,    155 ] # min extent, in clicks
-joint_max_clk = [   1000,    880,    990,    930,    880,    666 ] # max extent, in clicks
-joint_min_rad = [    -2.1,  -pi/2,  -2.079,  -1.806,    -pi/2,  0 ] # min extent, in radians
-joint_max_rad = [     2.1,   pi/2,   2.079,   1.806,     pi/2,  pi ] # max extent, in radians
+#                     base  shoulder     elbow     wrist      hand      grip
+#  joint number =        0         1         2         3         4         5
+#  servo number =        6         5         4         3         2         1
+joint_min_clk = [        0,      144,       10,       70,      120,      155 ] # min extent, in clicks
+joint_max_clk = [     1000,      880,      990,      930,      880,      666 ] # max extent, in clicks
+joint_min_rad = [     -2.1,    -pi/2,   -2.079,   -1.806,    -pi/2,        0 ] # min extent, in radians
+joint_max_rad = [      2.1,     pi/2,    2.079,    1.806,     pi/2,       pi ] # max extent, in radians
 
 #                                    _           , . ,    <-- imaginary end point
 #         grip finger length .......|            \   /
@@ -52,9 +53,9 @@ d5 = 0.160  # meters, distance between wrist joint and an imaginary point betwee
 
 # DH Parameter Table
 dh_params = [  # theta_offset,  alpha    a,    d 
-               [      0,         pi/2,   0,   d1 ], # joint 1, base rotation
-               [   pi/2,            0,  a2,    0 ], # joint 2, shoulder bend
-               [      0,            0,  a3,    0 ], # joint 3, elbow bend
+               [     pi,         pi/2,   0,   d1 ], # joint 1, base rotation
+               [   pi/2,           pi,  a2,    0 ], # joint 2, shoulder bend
+               [      0,           pi,  a3,    0 ], # joint 3, elbow bend   # note... corrected by 180 deg rotation
                [   pi/2,         pi/2,   0,    0 ], # joint 4, wrist bend
                [      0,            0,   0,   d5 ], # joint 5, wrist rotation
             ]
@@ -244,8 +245,10 @@ def calculate_joint_angles_delta(q_current, target, step_size=0.175):
     q_delta = (q_delta / np.linalg.norm(q_delta)) * step_size_adjusted
 
     print(f"err = %.2f mm from target position" % (err*1000))
-    print("step size = approx %.2f degrees total across all servos" % (step_size_adjusted * pi / 180.0))
-    print(f"q_delta = {q_delta}")
+    print("step size = approx %.3f degrees total across all servos" % (step_size_adjusted * 180/pi))
+    print("q_delta = [ %6.2f°  %6.2f°  %6.2f°  %6.2f°  %6.2f°  %6.2f° ]" % (
+        q_delta[0]*180/pi, q_delta[1]*180/pi, q_delta[2]*180/pi,
+        q_delta[3]*180/pi, q_delta[4]*180/pi, q_delta[5]*180/pi))
     
     return q_delta, err
 

@@ -76,7 +76,6 @@ if __name__ == "__main__":
     arm = Controller(use_arm, use_sim)
     arm.connect()
 
-    print(active)
     if all(active):
         print_header = 0
         while True:
@@ -89,7 +88,8 @@ if __name__ == "__main__":
             q_current = arm.q_current_radians()
             end_pos = calculate_end_pos(q_current)
             print("%7.2f°  %7.2f°  %7.2f°  %7.2f°      %6.1f mm  %6.1f mm  %6.1f mm" % (
-                q_current[0], q_current[1], q_current[2], q_current[3], 
+                q_current[0]*180/np.pi, q_current[1]*180/np.pi,
+                q_current[2]*180/np.pi, q_current[3]*180/np.pi, 
                 end_pos[0]*1000, end_pos[1]*1000, end_pos[2]*1000))
             clock.sleep(0.1)
     else:

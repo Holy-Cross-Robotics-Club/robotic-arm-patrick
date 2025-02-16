@@ -252,9 +252,9 @@ camera.lookAt(0, 5, 0);
 
 // Movement
 joints['base'].move =     (value) => { base.rotation.y = setJointClicks('base', value); };
-joints['shoulder'].move = (value) => { shoulder.rotation.z = setJointClicks('shoulder', value); };
+joints['shoulder'].move = (value) => { shoulder.rotation.z = -setJointClicks('shoulder', value); };
 joints['elbow'].move =    (value) => { elbow.rotation.z = setJointClicks('elbow', value); };
-joints['wrist'].move =    (value) => { wrist.rotation.z = setJointClicks('wrist', value); };
+joints['wrist'].move =    (value) => { wrist.rotation.z = -setJointClicks('wrist', value); };
 joints['hand'].move =     (value) => { hand.rotation.y = setJointClicks('hand', value); };
 joints['grip'].move =     (value) => {
     const angle = setJointClicks('grip', value);

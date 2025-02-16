@@ -10,9 +10,9 @@ import time as clock
 import sys
 
 next_print_header = 0
-def print_pos(q_current, end_pos, err, force=False):
+def print_pos(q_current, end_pos, err, q_new=None):
     global next_print_header
-    if force or next_print_header <= 0:
+    if next_print_header <= 0:
         next_print_header = 30
         print("    base  shoulder     elbow     wrist  ==>         x          y          z        err")
         print("--------  --------  --------  --------      ---------  ---------  ---------  ---------")
@@ -23,8 +23,13 @@ def print_pos(q_current, end_pos, err, force=False):
     else:
         errmsg = "%6.1f mm" % (err*1000.0)
     print("%7.2f°  %7.2f°  %7.2f°  %7.2f°      %6.1f mm  %6.1f mm  %6.1f mm  %9s" % (
-        q_current[0], q_current[1], q_current[2], q_current[3], 
+        q_current[0]*180/np.pi, q_current[1]*180/np.pi,
+        q_current[2]*180/np.pi, q_current[3]*180/np.pi, 
         end_pos[0]*1000, end_pos[1]*1000, end_pos[2]*1000, errmsg))
+    if q_new is not None:
+        print("%7.2f°  %7.2f°  %7.2f°  %7.2f°      (target angles)" % (
+            q_new[0]*180/np.pi, q_new[1]*180/np.pi,
+            q_new[2]*180/np.pi, q_new[3]*180/np.pi))
 
 if __name__ == "__main__":
 
@@ -132,9 +137,11 @@ if __name__ == "__main__":
     # servo_time: (in milliseconds) used by servos, controls how
     #            quickly servo attemps to move to each new position.
     #            Lower means faster movement.
+    #step_size = 0.0875 # about 5 degrees
     step_size = 0.175 # about 10 degrees
-    step_time = 1.0 # seconds
-    servo_time = 1 # milliseconds, integer
+    #step_size = 0.785 # about 45 degrees
+    step_time = 0.1 # seconds
+    servo_time = 50 # milliseconds
 
     # start moving
     preverr = 100.0
@@ -169,6 +176,7 @@ if __name__ == "__main__":
         preverr = err
         q_delta, err = calculate_joint_angles_delta(q_current, cart_target, step_size)
         q_new = np.array(q_current) + q_delta
+        print_pos(q_current, end_pos, err, q_new)
         arm.joints[0].set_position_radians(q_new[0], servo_time)
         arm.joints[1].set_position_radians(q_new[1], servo_time)
         arm.joints[2].set_position_radians(q_new[2], servo_time)

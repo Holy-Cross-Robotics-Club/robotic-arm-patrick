@@ -14,7 +14,7 @@ class Connection:
                 self.info = d
                 self.connection = hid.device()
                 self.connection.open_path(self.info['path'])
-        if self.connection is None: raise AssertionError("Could not find a matching device.")
+        if self.connection is None: raise AssertionError("USB connection for arm not detected. Are you sure it's plugged in and turned on?")
         else: print(f"Successfully conntected to {self.info['product_string']}.")
     def close(self):
         if self.connection is None: return
@@ -22,7 +22,9 @@ class Connection:
         print(f"Closed {self.info['product_string']}.")
     def write_out(self, m):
         # TODO: do some sanity checks
-        self.connection.write(m)
+        cnt = self.connection.write(m)
+        if cnt != len(m):
+            print(f"USB ERROR: result={err} after writing {len(m)} bytes {m}")
     def read_in(self, cmd, num_bytes):
         data = self.connection.read(4 + num_bytes)
         if data[0] == 85 and data[1] == 85 and data[2] == num_bytes and data[3] == cmd:

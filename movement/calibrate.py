@@ -15,6 +15,7 @@ if __name__ == "__main__":
     use_sim = False
     use_arm = False
     joint_arg = None
+    servo_time = None # for speed, use default
 
     for arg in sys.argv[1:]:
         if arg == "--sim":
@@ -24,6 +25,8 @@ if __name__ == "__main__":
         elif arg == "--both":
             use_sim = True
             use_arm = True
+        elif arg.startswith("--time="):
+            servo_time = int(arg[7:])
         elif arg in [ "--joint=0", "--servo=6", "--base"]:
             joint_arg = "base"
         elif arg in [ "--joint=1", "--servo=5", "--shoulder" ]:
@@ -106,17 +109,20 @@ if __name__ == "__main__":
             joint_arg = None
             continue
         if joint_arg is None:
-            print(f"NOTE: in future, you can use option '--joint={joint.jid-1}' or '--servo={joint.sid}' or '--{joint.name}'")
+            print(f"NOTE: in future, you can use option '--joint={joint.jid}' or '--servo={joint.sid}' or '--{joint.name}'")
 
+    delay = servo_time if servo_time is not None else joint.default_time
     while True:
+        deg = joint.get_position_radians() * 180/np.pi
+        print(f"Current {joint.name} (joint {joint.jid}, servo {joint.sid}) is at {deg} degrees")
         while joint.is_moving():
             #q_current = np.array([joint.get_position_radians() for joint in arm.joints])
             #end_pos = calculate_end_pos(q_current)
             #print(f"  servos = {arm.qToString(q_current)} so end_pos = {cartesianToString(end_pos)}")
-            clock.sleep(0.1)
+            clock.sleep(delay/1000)
             continue
         deg = float(input(f"Type an angle for {joint.name} in degrees: "))
         rad = deg * np.pi / 180
-        print(f"Setting {joint.name} (joint {joint.jid-1}, servo {joint.sid}) radians to {rad}")
-        joint.set_position_radians(rad, 2)
+        print(f"Setting {joint.name} (joint {joint.jid}, servo {joint.sid}) radians to {rad}, over approx {delay} ms")
+        joint.set_position_radians(rad, servo_time)
     
