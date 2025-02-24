@@ -221,6 +221,28 @@ def calculate_joint_angles_delta(q_current, target, step_size=0.175):
         The change in joint angles to achieve the desired end-effector change.
     """
 
+    # Before anything else, calculate the optimal base rotation angle.
+    # This can be solved directly:
+    # - using target x, y, z, calculate the target angle
+    # - if within base min/max angle, then use that as our target angle
+    # - otherwise, we need to bend over backwards, so use the opposite angle
+    # - examine the current base angle
+    # - if within step_size radians, then base should just move that amount
+    # - otherwise base should move step_size radians in correct direction
+    targetAngle = math.atan2(target[1], target[0])
+    if targetAngle < joint_min_rad[0]:
+        targetAngle += pi
+    elif joint_max_rad[0] < targetAngle:
+        targetAngle -= pi
+    baseAngle = q_current[0]
+    baseDelta = targetAngle - baseAngle # np.clip(targetAngle - baseAngle, -step_size, step_size)
+    print("target base angle %.3f deg, current base %.3f deg, move %.3f deg" % (
+        np.degrees(targetAngle), np.degrees(baseAngle), np.degrees(baseDelta)))
+    # Before rest of calculations, modify q_current to reflect where the
+    # base will eventually be rotated to.
+    # q_current = q_current.copy()
+    # q_current[0] = targetAngle
+
     # Compute the current position
     end_pos = anthroarm_dm(q_current)[0]
     # print("end_pos: " + cartesianToString(end_pos))
@@ -242,6 +264,10 @@ def calculate_joint_angles_delta(q_current, target, step_size=0.175):
     #  when err >= 0.030 then adjust by 1.0
     step_size_adjusted = step_size * min(1.0, math.sqrt(err/0.030))
     q_delta = J_pinv @ (target - end_pos)
+
+    # Fix q_delta so base rotates optimally
+    q_delta[0] = baseDelta
+    # Normalize q_delta so we move approx step_size_adjusted radians total across all joints
     q_delta = (q_delta / np.linalg.norm(q_delta)) * step_size_adjusted
 
     print(f"err = %.2f mm from target position" % (err*1000))
