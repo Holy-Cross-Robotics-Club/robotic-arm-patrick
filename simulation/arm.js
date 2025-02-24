@@ -119,6 +119,11 @@ const jointMaterial = new THREE.MeshPhongMaterial({
     specular: 0x222222,
     shininess: 30
 });
+const circuitMaterial = new THREE.MeshPhongMaterial({ 
+    color: 0x339933,
+    specular: 0x222222,
+    shininess: 30
+});
 const lineGeometry = new THREE.BufferGeometry();
 const lineMaterial = new THREE.LineBasicMaterial({ color: 0xdf0000 });
 const line = new THREE.Line(lineGeometry, lineMaterial);
@@ -131,13 +136,27 @@ light.castShadow = true;
 scene.add(light);
 scene.add(new THREE.AmbientLight(0x404040));
 
-// Ground plane
+// Ground plane, fixed mounting plate and circuit board
 const groundGeometry = new THREE.PlaneGeometry(20, 20);
 const groundMaterial = new THREE.MeshPhongMaterial({ color: 0x333333 });
 const ground = new THREE.Mesh(groundGeometry, groundMaterial);
 ground.rotation.x = -Math.PI / 2;
 ground.receiveShadow = true;
 scene.add(ground);
+const circuitGeometry = new THREE.BoxGeometry(1.5, 0.2, 2);
+const circuitMesh = new THREE.Mesh(circuitGeometry, circuitMaterial);
+circuitMesh.castShadow = true;
+circuitMesh.position.x = -2;
+circuitMesh.position.y = 0.2;
+circuitMesh.position.z = 0.0;
+scene.add(circuitMesh);
+const baseplateGeometry = new THREE.BoxGeometry(4, 0.2, 4);
+const baseplateMesh = new THREE.Mesh(baseplateGeometry, armMaterial);
+baseplateMesh.castShadow = true;
+baseplateMesh.position.x = 0.0;
+baseplateMesh.position.y = 0.1;
+baseplateMesh.position.z = 0.0;
+scene.add(baseplateMesh);
 
 // Robot arm parts
 const base = new THREE.Group();
@@ -151,14 +170,21 @@ const motorGeometry = new THREE.CylinderGeometry(0.6, 0.6, 1, 32);
 const motor = new THREE.Mesh(motorGeometry, jointMaterial);
 motor.rotation.x = -Math.PI / 2;
 
-// Base plate
-const baseGeometry = new THREE.CylinderGeometry(2, 2.5, 1, 32);
-baseGeometry.translate(0, 0.5, 0);
-const baseMesh = new THREE.Mesh(baseGeometry, baseMaterial);
+// Base plate and standoff
+const baseGeometry = new THREE.CylinderGeometry(1.5, 1.5, 0.1, 32);
+baseGeometry.translate(0, 1, 0);
+const baseMesh = new THREE.Mesh(baseGeometry, armMaterial);
 baseMesh.castShadow = true;
 base.add(baseMesh);
-const standoffGeometry = new THREE.BoxGeometry(1, (d1-1), 1);
+const baseGeometry2 = new THREE.CylinderGeometry(1.5, 1.5, 0.1, 32);
+baseGeometry2.translate(0, 0.7, 0);
+const baseMesh2 = new THREE.Mesh(baseGeometry2, armMaterial);
+baseMesh2.castShadow = true;
+base.add(baseMesh2);
+
+const standoffGeometry = new THREE.BoxGeometry(1.8, (d1-1), 1);
 const standoffMesh = new THREE.Mesh(standoffGeometry, armMaterial);
+standoffMesh.position.x = -0.4;
 standoffMesh.position.y = d1/2;
 standoffMesh.castShadow = true;
 base.add(standoffMesh);
