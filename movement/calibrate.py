@@ -113,16 +113,19 @@ if __name__ == "__main__":
 
     delay = servo_time if servo_time is not None else joint.default_time
     while True:
-        deg = joint.get_position_radians() * 180/np.pi
-        print(f"Current {joint.name} (joint {joint.jid}, servo {joint.sid}) is at {deg} degrees")
+        clicks, rad, deg = joint.get_position()
+        print(f"Current {joint.name} (joint {joint.jid}, servo {joint.sid}) is at {clicks} clicks, {deg} degrees")
         while joint.is_moving():
             #q_current = np.array([joint.get_position_radians() for joint in arm.joints])
             #end_pos = calculate_end_pos(q_current)
             #print(f"  servos = {arm.qToString(q_current)} so end_pos = {cartesianToString(end_pos)}")
             clock.sleep(delay/1000)
             continue
-        deg = float(input(f"Type an angle for {joint.name} in degrees: "))
-        rad = deg * np.pi / 180
+        s = input(f"Type an angle for {joint.name} in degrees: ")
+        if not s:
+            continue
+        deg = float(s)
+        rad = np.radians(deg)
         print(f"Setting {joint.name} (joint {joint.jid}, servo {joint.sid}) radians to {rad}, over approx {delay} ms")
         joint.set_position_radians(rad, servo_time)
     

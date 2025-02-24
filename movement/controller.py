@@ -29,10 +29,18 @@ class Servo:
         self.controller.connection.write_out([85, 85, 4, 21, 1, self.sid])
         self.controller.vieweronly.write_out([85, 85, 4, 21, 1, self.sid])
         result = self.controller.connection.read_in(21, 6)
-        hex = (result[3] * 256 + result[2]) # returns hex
-        return hex
+        unsigned_clicks = (result[3] * 256 + result[2])
+        #return unsigned_clicks
+        signed_clicks = unsigned_clicks if unsigned_clicks <= 32767 else unsigned_clicks - 65536
+        return signed_clicks
     def get_position_radians(self):
         return self.hex_to_radians(self.get_position_hex())
+    def get_position(self):
+        """ Returns position in all three units: clicks, radians, and degrees """
+        clicks = self.get_position_hex()
+        rad = self.hex_to_radians(clicks)
+        deg = np.degrees(rad)
+        return clicks, rad, deg
     def is_moving(self):
         if self.curr_set_pos is None:
             return False
@@ -56,6 +64,13 @@ class Servo:
         self.set_position_hex(hex, time)
         return hex
     def hex_to_radians(self, hex):
+        # Check and warn if hex is outside our known valid range, force it back into range.
+        if hex < self.position_range[0]:
+            print(f"ERROR: OUT OF RANGE: joint={self.jid} sid={self.sid} {self.name} current={hex} valid_range={self.position_range[0]}...{self.position_range[1]}")
+            hex = self.position_range[0]
+        elif self.position_range[1] < hex:
+            print(f"ERROR: OUT OF RANGE: joint={self.jid} sid={self.sid} {self.name} current={hex} valid_range={self.position_range[0]}...{self.position_range[1]}")
+            hex = self.position_range[1]
         rad_span = (self.radian_range[1] - self.radian_range[0])
         hex_span = (self.position_range[1] - self.position_range[0])
         rad = self.radian_range[0] + (hex - self.position_range[0]) * rad_span / hex_span
@@ -105,6 +120,10 @@ class Controller:
     def q_current_radians(self):
         """ Returns a numpy array with radian angles of all joints """
         return np.array([joint.get_position_radians() for joint in self.joints])
+    def q_current(self):
+        """ Returns a 6x3 numpy array. The first row is click angles of all joints,
+            second row is radian angles, third row is degree angles. """
+        return np.array([joint.get_position() for joint in self.joints]).transpose()
     def qToDegreeString(self, q):
         """ Takes an nparray of radian angles, returns a nice string showing degrees """
         d0 = q[0] * 180/np.pi

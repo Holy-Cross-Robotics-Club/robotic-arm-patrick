@@ -17,11 +17,15 @@ if __name__ == "__main__":
 
     active = [ False ] * 6
 
+    units = "deg"
+
     for arg in sys.argv[1:]:
         if arg == "--sim":
             use_sim = True
         elif arg == "--arm":
             use_arm = True
+        elif arg in [ "--deg", "--rad", "--clicks" ]:
+            units = arg[2:]
         elif arg in [ "--joint=0", "--servo=6", "--base"]:
             active[0] = True
         elif arg in [ "--joint=1", "--servo=5", "--shoulder" ]:
@@ -41,6 +45,9 @@ if __name__ == "__main__":
             print("Options:")
             print("  --sim          ... monitor the browser-based simulation")
             print("  --arm          ... connect to and monitor the physical robot arm")
+            print("  --deg          ... show angles in degrees (the default)")
+            print("  --rad          ... show angles in radians")
+            print("  --clicks       ... show angles in clicks")
             print("  --all          ... monitor all joints")
             print("  --joint=N      ... monitor joint N, numbered 0 to 5 from base to gripper")
             print("  --servo=S      ... monitor servo S, numbered 6 to 1 from base to gripper")
@@ -85,12 +92,23 @@ if __name__ == "__main__":
                 print("--------  --------  --------  --------      ---------  ---------  ---------")
             else:
                 print_header -= 1
-            q_current = arm.q_current_radians()
-            end_pos = calculate_end_pos(q_current)
-            print("%7.2f°  %7.2f°  %7.2f°  %7.2f°      %6.1f mm  %6.1f mm  %6.1f mm" % (
-                q_current[0]*180/np.pi, q_current[1]*180/np.pi,
-                q_current[2]*180/np.pi, q_current[3]*180/np.pi, 
-                end_pos[0]*1000, end_pos[1]*1000, end_pos[2]*1000))
+            q_current = arm.q_current()
+            clicks = q_current[0]
+            rad = q_current[1]
+            deg = q_current[2]
+            end_pos = calculate_end_pos(rad)
+            if units == "deg":
+                print("%7.2f°  %7.2f°  %7.2f°  %7.2f°      %6.1f mm  %6.1f mm  %6.1f mm" % (
+                    deg[0], deg[1], deg[2], deg[3],
+                    end_pos[0]*1000, end_pos[1]*1000, end_pos[2]*1000))
+            elif units == "rad":
+                print("%4.2f rad  %4.2f rad  %4.2f rad  %4.2f rad      %6.1f mm  %6.1f mm  %6.1f mm" % (
+                    rad[0], rad[1], rad[2], rad[3],
+                    end_pos[0]*1000, end_pos[1]*1000, end_pos[2]*1000))
+            else:
+                print("%8d  %8d  %8d  %8d       %6.1f mm  %6.1f mm  %6.1f mm" % (
+                    clicks[0], clicks[1], clicks[2], clicks[3],
+                    end_pos[0]*1000, end_pos[1]*1000, end_pos[2]*1000))
             clock.sleep(0.1)
     else:
         joint_indices = [idx for idx, isactive in enumerate(active) if isactive]
@@ -100,18 +118,19 @@ if __name__ == "__main__":
             if print_header <= 0:
                 print_header = 30
                 for joint in joints:
-                    print("%12s" % (joint.name), end="  ")
+                    print("%13s" % (joint.name), end="  ")
                 print()
                 for joint in joints:
-                    print("%12s" % ("-" * 12), end="  ")
+                    print("%13s" % ("-" * 13), end="  ")
                 print()
             else:
                 print_header -= 1
             for joint in joints:
-                ticks = joint.get_position_hex()
-                rad = joint.hex_to_radians(ticks)
-                deg = rad * 180/np.pi
-                print("%4d %6.2f°" % (ticks, deg), end="  ")
+                clicks, rad, deg = joint.get_position()
+                if units == "rad":
+                    print("%5d %4.2f rad" % (clicks, rad), end="  ")
+                else:
+                    print("%5d %6.2f°" % (clicks, deg), end="  ")
             print()
             clock.sleep(0.1)
 
