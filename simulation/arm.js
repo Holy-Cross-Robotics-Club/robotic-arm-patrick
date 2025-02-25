@@ -59,21 +59,20 @@
 const scaleFactor = 25.0;
 function fromMeters(dist) { return dist * scaleFactor; } // arbitrary scale factor for the animation }
 
-const d1 = fromMeters(0.080); //  meters, height of shoulder joint above table or baseplate
-const a2 = fromMeters(0.100); //  meters, distance between shoulder joint and elbow joint
-const a3 = fromMeters(0.095); //  meters, distance between elbow joint and wrist joint
-const d5 = fromMeters(0.160); //  meters, distance between wrist joint and an imaginary point between fingers
-
+// note: This are placeholders, will get overwritten by values in json from server
+let d1 = fromMeters(0.080); //  meters, height of shoulder joint above table or baseplate
+let a2 = fromMeters(0.100); //  meters, distance between shoulder joint and elbow joint
+let a3 = fromMeters(0.095); //  meters, distance between elbow joint and wrist joint
+let d5 = fromMeters(0.160); //  meters, distance between wrist joint and an imaginary point between fingers
 let axes = [ 'grip', 'hand', 'wrist', 'elbow', 'shoulder', 'base' ];
 let joints = {
-    grip:     { id: 1, name: "grip",      cmin: 155, cmax:  666, cini: 432,  dmin:   0,       dmax:  180,     doff: 0  },
-    hand:     { id: 2, name: "hand",      cmin: 120, cmax:  880, cini: 488,  dmin:  -90.0,    dmax:  90.0,    doff: 0  },
-    wrist:    { id: 3, name: "wrist",     cmin:  70, cmax:  930, cini: 492,  dmin:  -103.476, dmax:  103.476, doff: 0  },
-    elbow:    { id: 4, name: "elbow",     cmin:  10, cmax:  990, cini: 498,  dmin:  -119.118, dmax:  119.118, doff: 0  },
-    shoulder: { id: 5, name: "shoulder",  cmin: 144, cmax:  880, cini: 512,  dmin:  -90.0,    dmax:  90.0,    doff: 0  },
-    base:     { id: 6, name: "base",      cmin:   0, cmax: 1000, cini: 504,  dmin:  -120.321, dmax:  120.321, doff: 0  },
+    grip:     { id: 1, name: "grip",      cmin: 155, cmax:  666, cini: 432,  dmin:   0,       dmax:  180,     doff: 0, orientation: +0.25  },
+    hand:     { id: 2, name: "hand",      cmin: 120, cmax:  880, cini: 488,  dmin:  -90.0,    dmax:  90.0,    doff: 0, orientation: -1  },
+    wrist:    { id: 3, name: "wrist",     cmin:  70, cmax:  930, cini: 492,  dmin:  -103.476, dmax:  103.476, doff: 0, orientation: +1  },
+    elbow:    { id: 4, name: "elbow",     cmin:  10, cmax:  990, cini: 498,  dmin:  -119.118, dmax:  119.118, doff: 0, orientation: -1  },
+    shoulder: { id: 5, name: "shoulder",  cmin: 144, cmax:  880, cini: 512,  dmin:  -90.0,    dmax:  90.0,    doff: 0, orientation: +1  },
+    base:     { id: 6, name: "base",      cmin:   0, cmax: 1000, cini: 504,  dmin:  -120.321, dmax:  120.321, doff: 0, orientation: +1  },
 };
-
 
 // Scene setup
 const scene = new THREE.Scene();
@@ -135,176 +134,197 @@ light.position.set(10, 10, 10);
 light.castShadow = true;
 scene.add(light);
 scene.add(new THREE.AmbientLight(0x404040));
-
-// Ground plane, fixed mounting plate and circuit board
+    
+// Ground plane
 const groundGeometry = new THREE.PlaneGeometry(20, 20);
 const groundMaterial = new THREE.MeshPhongMaterial({ color: 0x333333 });
 const ground = new THREE.Mesh(groundGeometry, groundMaterial);
 ground.rotation.x = -Math.PI / 2;
 ground.receiveShadow = true;
 scene.add(ground);
-const circuitGeometry = new THREE.BoxGeometry(1.5, 0.2, 2);
-const circuitMesh = new THREE.Mesh(circuitGeometry, circuitMaterial);
-circuitMesh.castShadow = true;
-circuitMesh.position.x = -2;
-circuitMesh.position.y = 0.2;
-circuitMesh.position.z = 0.0;
-scene.add(circuitMesh);
-const baseplateGeometry = new THREE.BoxGeometry(4, 0.2, 4);
-const baseplateMesh = new THREE.Mesh(baseplateGeometry, armMaterial);
-baseplateMesh.castShadow = true;
-baseplateMesh.position.x = 0.0;
-baseplateMesh.position.y = 0.1;
-baseplateMesh.position.z = 0.0;
-scene.add(baseplateMesh);
 
-// Robot arm parts
-const base = new THREE.Group();
-const shoulder = new THREE.Group();
-const elbow = new THREE.Group();
-const wrist = new THREE.Group();
-const hand = new THREE.Group();
-const grip = new THREE.Group();
-
-const motorGeometry = new THREE.CylinderGeometry(0.6, 0.6, 1, 32);
-const motor = new THREE.Mesh(motorGeometry, jointMaterial);
-motor.rotation.x = -Math.PI / 2;
-
-// Base plate and standoff
-const baseGeometry = new THREE.CylinderGeometry(1.5, 1.5, 0.1, 32);
-baseGeometry.translate(0, 1, 0);
-const baseMesh = new THREE.Mesh(baseGeometry, armMaterial);
-baseMesh.castShadow = true;
-base.add(baseMesh);
-const baseGeometry2 = new THREE.CylinderGeometry(1.5, 1.5, 0.1, 32);
-baseGeometry2.translate(0, 0.7, 0);
-const baseMesh2 = new THREE.Mesh(baseGeometry2, armMaterial);
-baseMesh2.castShadow = true;
-base.add(baseMesh2);
-
-const standoffGeometry = new THREE.BoxGeometry(1.8, (d1-1), 1);
-const standoffMesh = new THREE.Mesh(standoffGeometry, armMaterial);
-standoffMesh.position.x = -0.4;
-standoffMesh.position.y = d1/2;
-standoffMesh.castShadow = true;
-base.add(standoffMesh);
-
-// Shoulder with joint visualization
-shoulder.add(motor.clone());
-const shoulderGeometry = new THREE.BoxGeometry(1, (a2-1), 1);
-const shoulderMesh = new THREE.Mesh(shoulderGeometry, armMaterial);
-shoulderMesh.position.y = a2/2;
-shoulderMesh.castShadow = true;
-shoulder.add(shoulderMesh);
-
-// Elbow with joint visualization
-elbow.add(motor.clone());
-const elbowGeometry = new THREE.BoxGeometry(1, (a3-1), 1);
-const elbowMesh = new THREE.Mesh(elbowGeometry, armMaterial);
-elbowMesh.position.y = a3/2;
-elbowMesh.castShadow = true;
-elbow.add(elbowMesh);
-
-// Wrist with joint visualization
-wrist.add(motor.clone());
-const wristGeometry = new THREE.BoxGeometry(1, (d5-0.5-1-0.4), 1);
-const wristMesh = new THREE.Mesh(wristGeometry, armMaterial);
-wristMesh.position.y = 0.5+(d5-0.5-1-0.4)/2;
-wristMesh.castShadow = true;
-wrist.add(wristMesh);
-
-// Hand with wrist rotation visualization
-const wristRotationMotor = motor.clone()
-wristRotationMotor.rotation.x = 0;
-wristRotationMotor.rotation.y = -Math.PI / 2;
-hand.add(wristRotationMotor);
-const handGeometry = new THREE.BoxGeometry(1, 0.4, 1);
-const handMesh = new THREE.Mesh(handGeometry, armMaterial);
-handMesh.position.y = 0.7;
-handMesh.castShadow = true;
-hand.add(handMesh);
-
-// Enhanced grip
-function createGripperFinger() {
-    const finger = new THREE.Group();
-    
-    // Base of the finger
-    const knuckle = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.8, 0.2), fingerMaterial);
-    knuckle.position.y = 0.2;
-    finger.add(knuckle);
-    
-    // Tip of the finger
-    const tip = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.4, 0.15), fingerMaterial);
-    tip.position.y = 0.7;
-    finger.add(tip);
-
-    finger.bend = function(angle) {
-        finger.rotation.z = angle;
-        tip.rotation.z = -angle;
-    }
-    finger.knuckle = knuckle;
-    finger.tip = tip;
-    
-    return finger;
-}
-
-const leftFinger = createGripperFinger();
-const rightFinger = createGripperFinger();
-leftFinger.position.set(-0.3, 0.3, 0);
-rightFinger.position.set(0.3, 0.3, 0);
-grip.add(leftFinger);
-grip.add(rightFinger);
-const target = new THREE.Mesh(new THREE.SphereGeometry(0.2), targetMaterial);
-target.position.y = 1;
-grip.add(target);
-
-// Hierarchy
-scene.add(base);
-base.add(shoulder);
-shoulder.position.y = d1;
-shoulder.add(elbow);
-elbow.position.y = a2;
-elbow.add(wrist);
-wrist.position.y = a3;
-wrist.add(hand);
-hand.position.y = d5-2; // most of length is for the hand, 1 for grip, 1 for target
-hand.add(grip);
-grip.position.y = 1;
-scene.add(line);
+// Axis arrows
+scene.add(createArrow(0x6666ff, new THREE.Vector3(1, 0, 0), 12, 0.15)); // X axis - blue
+scene.add(createArrow(0x66ff66, new THREE.Vector3(0, 0, -1), 12, 0.15)); // Y axis - green
+scene.add(createArrow(0xff3333, new THREE.Vector3(0, 1, 0), 12, 0.05)); // Z axis - red
 
 // Camera position
 camera.position.set(15, 10, 15);
 camera.lookAt(0, 5, 0);
 
-// Movement
-joints['base'].move =     (value) => { base.rotation.y = setJointClicks('base', value); };
-joints['shoulder'].move = (value) => { shoulder.rotation.z = -setJointClicks('shoulder', value); };
-joints['elbow'].move =    (value) => { elbow.rotation.z = setJointClicks('elbow', value); };
-joints['wrist'].move =    (value) => { wrist.rotation.z = -setJointClicks('wrist', value); };
-joints['hand'].move =     (value) => { hand.rotation.y = setJointClicks('hand', value); };
-joints['grip'].move =     (value) => {
-    const angle = setJointClicks('grip', value);
-    leftFinger.bend(angle);
-    rightFinger.bend(-angle);
-}
+function buildrobot() {
+    // todo: clear all except ground
 
-// Configure sliders and initial joint values
-const coords = document.getElementById('coords');
-for (let j in joints) {
-    const joint = joints[j]
-    const val = joint.cini;
-    const slider = document.getElementById(j);
-    const display = document.getElementById(j + 'Value');
-    joint.cval = val;
-    slider.min = joint.cmin;
-    slider.max = joint.cmax;
-    slider.value = val;
-    display.classList.add("display");
-    // display.textContent = `${val}, ${toDegrees(joint).toFixed(2)}${degree}`;
-    joint.slider = slider;
-    joint.display = display;
-    slider.addEventListener('input', () => panel_updateJoint(joint));
-}
+    // Fixed mounting plate and circuit board
+    const circuitGeometry = new THREE.BoxGeometry(1.5, 0.2, 2);
+    const circuitMesh = new THREE.Mesh(circuitGeometry, circuitMaterial);
+    circuitMesh.castShadow = true;
+    circuitMesh.position.x = -2;
+    circuitMesh.position.y = 0.2;
+    circuitMesh.position.z = 0.0;
+    scene.add(circuitMesh);
+    const baseplateGeometry = new THREE.BoxGeometry(4, 0.2, 4);
+    const baseplateMesh = new THREE.Mesh(baseplateGeometry, armMaterial);
+    baseplateMesh.castShadow = true;
+    baseplateMesh.position.x = 0.0;
+    baseplateMesh.position.y = 0.1;
+    baseplateMesh.position.z = 0.0;
+    scene.add(baseplateMesh);
+
+    // Robot arm parts
+    const base = new THREE.Group();
+    const shoulder = new THREE.Group();
+    const elbow = new THREE.Group();
+    const wrist = new THREE.Group();
+    const hand = new THREE.Group();
+    const grip = new THREE.Group();
+
+    const motorGeometry = new THREE.CylinderGeometry(0.6, 0.6, 1, 32);
+    const motor = new THREE.Mesh(motorGeometry, jointMaterial);
+    motor.rotation.x = -Math.PI / 2;
+
+    // Base plate and standoff
+    const baseGeometry = new THREE.CylinderGeometry(1.5, 1.5, 0.1, 32);
+    baseGeometry.translate(0, 1, 0);
+    const baseMesh = new THREE.Mesh(baseGeometry, armMaterial);
+    baseMesh.castShadow = true;
+    base.add(baseMesh);
+    const baseGeometry2 = new THREE.CylinderGeometry(1.5, 1.5, 0.1, 32);
+    baseGeometry2.translate(0, 0.7, 0);
+    const baseMesh2 = new THREE.Mesh(baseGeometry2, armMaterial);
+    baseMesh2.castShadow = true;
+    base.add(baseMesh2);
+
+    const standoffGeometry = new THREE.BoxGeometry(1.8, (d1-1), 1);
+    const standoffMesh = new THREE.Mesh(standoffGeometry, armMaterial);
+    standoffMesh.position.x = -0.4;
+    standoffMesh.position.y = d1/2;
+    standoffMesh.castShadow = true;
+    base.add(standoffMesh);
+
+    // Shoulder with joint visualization
+    shoulder.add(motor.clone());
+    const shoulderGeometry = new THREE.BoxGeometry(1, (a2-1), 1);
+    const shoulderMesh = new THREE.Mesh(shoulderGeometry, armMaterial);
+    shoulderMesh.position.y = a2/2;
+    shoulderMesh.castShadow = true;
+    shoulder.add(shoulderMesh);
+
+    // Elbow with joint visualization
+    elbow.add(motor.clone());
+    const elbowGeometry = new THREE.BoxGeometry(1, (a3-1), 1);
+    const elbowMesh = new THREE.Mesh(elbowGeometry, armMaterial);
+    elbowMesh.position.y = a3/2;
+    elbowMesh.castShadow = true;
+    elbow.add(elbowMesh);
+
+    // Wrist with joint visualization
+    wrist.add(motor.clone());
+    const wristGeometry = new THREE.BoxGeometry(1, (d5-2-1), 1);
+    const wristMesh = new THREE.Mesh(wristGeometry, armMaterial);
+    wristMesh.position.y = (d5-2)/2;
+    wristMesh.castShadow = true;
+    wrist.add(wristMesh);
+
+    // Hand with wrist rotation visualization
+    const wristRotationMotor = motor.clone()
+    wristRotationMotor.rotation.x = 0;
+    wristRotationMotor.rotation.y = -Math.PI / 2;
+    hand.add(wristRotationMotor);
+    const handGeometry = new THREE.BoxGeometry(1, 0.4, 1);
+    const handMesh = new THREE.Mesh(handGeometry, armMaterial);
+    handMesh.position.y = 0.7;
+    handMesh.castShadow = true;
+    hand.add(handMesh);
+
+    // Enhanced grip
+    function createGripperFinger() {
+        const finger = new THREE.Group();
+        
+        // Base of the finger
+        const knuckle = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.8, 0.2), fingerMaterial);
+        knuckle.position.y = 0.2;
+        finger.add(knuckle);
+        
+        // Tip of the finger
+        const tip = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.4, 0.15), fingerMaterial);
+        tip.position.y = 0.7;
+        finger.add(tip);
+
+        finger.bend = function(angle) {
+            finger.rotation.z = angle;
+            tip.rotation.z = -angle;
+        }
+        finger.knuckle = knuckle;
+        finger.tip = tip;
+        
+        return finger;
+    }
+
+    const leftFinger = createGripperFinger();
+    const rightFinger = createGripperFinger();
+    leftFinger.position.set(-0.3, 0.3, 0);
+    rightFinger.position.set(0.3, 0.3, 0);
+    grip.add(leftFinger);
+    grip.add(rightFinger);
+
+    targetball = new THREE.Mesh(new THREE.SphereGeometry(0.2), targetMaterial);
+
+    // Hierarchy
+    scene.add(base);
+    base.add(shoulder);
+    shoulder.position.y = d1;
+    shoulder.add(elbow);
+    elbow.position.y = a2;
+    elbow.add(wrist);
+    wrist.position.y = a3;
+    wrist.add(hand);
+    hand.position.y = d5-2; // most of length is for the hand, 1 for the grip position, 1 for ball position
+    hand.add(grip);
+    grip.position.y = 1;
+    grip.add(targetball);
+    targetball.position.y = 1;
+
+    scene.add(line);
+
+    // Movement
+    joints['base'].move =     (value) => { base.rotation.y = setJointClicks('base', value); };
+    joints['shoulder'].move = (value) => { shoulder.rotation.z = setJointClicks('shoulder', value); };
+    joints['elbow'].move =    (value) => { elbow.rotation.z = setJointClicks('elbow', value); };
+    joints['wrist'].move =    (value) => { wrist.rotation.z = setJointClicks('wrist', value); };
+    joints['hand'].move =     (value) => { hand.rotation.y = setJointClicks('hand', value); };
+    joints['grip'].move =     (value) => {
+        const angle = setJointClicks('grip', value);
+        leftFinger.bend(angle);
+        rightFinger.bend(-angle);
+    }
+
+    // Configure sliders and initial joint values
+    const coords = document.getElementById('coords');
+    for (let j in joints) {
+        const joint = joints[j]
+        const val = joint.cini;
+        const slider = document.getElementById(j);
+        const display = document.getElementById(j + 'Value');
+        joint.cval = val;
+        slider.min = joint.cmin;
+        slider.max = joint.cmax;
+        slider.value = val;
+        display.classList.add("display");
+        // display.textContent = `${val}, ${toDegrees(joint).toFixed(2)}${degree}`;
+        joint.slider = slider;
+        joint.display = display;
+        slider.addEventListener('input', () => panel_updateJoint(joint));
+    }
+
+    for (let j in joints) {
+        const joint = joints[j];
+        panel_updateJoint(joint);
+    }
+
+} // end of buildrobot()
+
+let targetball = null;
 
 function toDegrees(joint) {
     const val = joint.cval;
@@ -326,7 +346,7 @@ function setJointClicks(j, value) { // returns angle of joint in radians
     const deg = toDegrees(joint);
     const odeg = deg + joint.doff;
     joint.display.textContent = `${joint.cval} (${odeg.toFixed(2)}${degree})`;
-    return THREE.MathUtils.degToRad(deg);
+    return THREE.MathUtils.degToRad(deg) * joint.orientation;
 }
 
 // User interaction
@@ -336,7 +356,7 @@ function panel_updateJoint(joint) {
     // update animation
     joint.move(val);
     // inform remote server
-    if (ws.readyState === WebSocket.OPEN) {
+    if (ws != null && ws.readyState === WebSocket.OPEN) {
         const data = [joint.id, joint.cval & 0xff, (joint.cval >> 8) & 0xff];
         ws.send(new Uint8Array(data));
     }
@@ -456,8 +476,38 @@ statusDot.onclick = () => {
     }
 };
 
-// Initial connection
-connect();
+function configure() {
+    fetch('parameters.json')
+        .then(response => {
+            if (!response.ok)
+                throw new Error('Failed to get robot parameters: ' + response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Parameters received:', data);
+            // Example: access specific parameters
+            d1 = fromMeters(data.d1);
+            a2 = fromMeters(data.a2);
+            a3 = fromMeters(data.a3);
+            d5 = fromMeters(data.d5);
+            let cmin = data.cmin;
+            let cmax = data.cmax;
+            let rmin = data.rmin;
+            let rmax = data.rmax;
+            for (let j in joints) {
+                j.cmin = cmin[j.id];
+                j.cmax = cmax[j.id];
+                j.cini = Math.round((j.cmin + j.cmax)/2);
+                j.dmin = rmin[j.id] * 180/Math.PI;
+                j.dmax = rmax[j.id] * 180/Math.PI;
+            }
+            buildrobot();
+            connect();
+        })
+        .catch(error => {
+            console.error('Fetch error:', error);
+        });
+}
 
 // Create axes helper
 function createArrow(color, direction, length, radius) {
@@ -487,9 +537,7 @@ function createArrow(color, direction, length, radius) {
     linkGroup.add(cone);
     return linkGroup;
 }
-scene.add(createArrow(0x6666ff, new THREE.Vector3(1, 0, 0), 12, 0.15)); // X axis - blue
-scene.add(createArrow(0x66ff66, new THREE.Vector3(0, 0, -1), 12, 0.15)); // Y axis - green
-scene.add(createArrow(0xff3333, new THREE.Vector3(0, 1, 0), 12, 0.05)); // Z axis - red
+
 // Add labels (using HTML divs positioned in 3D space)
 const axisLabels = ['X', 'Z', 'Y'];
 const positions = [
@@ -528,20 +576,22 @@ function animate() {
     // rightFinger.tip.getWorldPosition(positionR);
     // const position = positionL.clone().lerp(positionR, 0.5);
     const position = new THREE.Vector3();
-    target.getWorldPosition(position);
-    points.push(position.clone());
-
-    // the shoulder is a bit above the table, subtract that off
-    // position.y -= shoulder.position.y
-    position.multiplyScalar(1/scaleFactor);
-    // THREE.js uses y as vertical (normal to the tabletop), xArm uses z as vertical
-    coords.textContent = `x: ${(position.x*1000).toFixed(0)} mm  y: ${(-position.z*1000).toFixed(0)} mm  z: ${(position.y*1000).toFixed(0)} mm`
-    lineGeometry.setFromPoints(points);
+    if (targetball) {
+        targetball.getWorldPosition(position);
+        points.push(position.clone());
+        // the shoulder is a bit above the table, subtract that off
+        // position.y -= shoulder.position.y
+        position.multiplyScalar(1/scaleFactor);
+        // THREE.js uses y as vertical (normal to the tabletop), xArm uses z as vertical
+        coords.textContent = `x: ${(position.x*1000).toFixed(0)} mm  y: ${(-position.z*1000).toFixed(0)} mm  z: ${(position.y*1000).toFixed(0)} mm`
+        lineGeometry.setFromPoints(points);
+    }
 
     axisUpdateFunctions.forEach(fn => fn());
 
     renderer.render(scene, camera);
 }
+
 animate();
 
 // Toggle button
@@ -579,7 +629,8 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-for (let j in joints) {
-    const joint = joints[j];
-    panel_updateJoint(joint);
-}
+// Initial connection
+// connect();
+
+// Initial configuration
+configure();

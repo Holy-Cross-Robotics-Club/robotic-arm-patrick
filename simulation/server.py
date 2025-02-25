@@ -12,6 +12,7 @@ import traceback
 import time
 import webbrowser
 from simulation import async_recvmsg, async_sendmsg
+import parameters
 
 debug = False
 running = True
@@ -20,13 +21,24 @@ http_port = 8000
 ws_port = 8001
 arm_port = 8002
 
-#joint   -      1     2     3     4     5     6
-cmin = [ 0,   155,  120,   70,   10,  144,    0 ]
-cmax = [ 0,   666,  880,  930,  990,  880, 1000 ]
-cval = [ 0,   432,  488,  492,  498,  512,  504 ]
-ctgt = [ 0,   432,  488,  492,  498,  512,  504 ]
+# servo    -      1     2     3     4     5     6
+# joint    -      5     4     3     2     1     0
+# cmin = [ 0,   155,  120,   70,   10,  144,    0 ]
+# cmax = [ 0,   666,  880,  930,  990,  880, 1000 ]
+# cval = [ 0,   432,  488,  492,  498,  512,  504 ]
+# ctgt = [ 0,   432,  488,  492,  498,  512,  504 ]
+cmin = [ 0 ] + [ parameters.joint_min_clk[i] for i in [5, 4, 3, 2, 1, 0] ]
+cmax = [ 0 ] + [ parameters.joint_max_clk[i] for i in [5, 4, 3, 2, 1, 0] ]
+cval = [ int((lo + hi) / 2) for lo, hi in zip(cmin, cmax) ]
+ctgt = cval.copy()
+rmin = [ 0 ] + [ parameters.joint_min_rad[i] for i in [5, 4, 3, 2, 1, 0] ]
+rmax = [ 0 ] + [ parameters.joint_max_rad[i] for i in [5, 4, 3, 2, 1, 0] ]
 
 acceleration = 100
+
+# make a json bundle with parameters to give to javascript in browser
+json = '{ "cmin" : %s, "cmax" : %s, "rmin": %s, "rmax": %s, "d1": %s, "a2": %s, "a3": %s, "d5": %s }' % (
+        cmin, cmax, rmin, rmax, parameters.d1, parameters.a2, parameters.a3, parameters.d5)
 
 async def physics_loop():
     while running:
@@ -226,6 +238,9 @@ async def handle_file(request, webdir, filename=None):
         return web.Response(status=404)
     return web.FileResponse(filepath)
 
+async def handle_json(request):
+    return web.Response(text=json)
+
 async def shutdown():
     global running, http_runner, ws_server, arm_server
     if running:
@@ -249,6 +264,7 @@ async def main(webdir):
 
     app = web.Application()
     app.router.add_get('/', lambda r: handle_file(r, webdir, 'arm.html'))
+    app.router.add_get('/parameters.json', lambda r: handle_json(r))
     app.router.add_get('/{filename}', lambda r: handle_file(r, webdir))
 
     # (1) Start http server

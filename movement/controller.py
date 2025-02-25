@@ -57,6 +57,16 @@ class Servo:
         # the second command seems to fail. There needs to be a 10ms or larger delay. This
         # doesn't seem to be documented anywhere.
         clock.sleep(0.020) # 20ms delay, sending move command after reading position fails if done too quickly??
+        # Convert signed hex values to unsigned 
+        if pos < 0:
+            pos = pos + 65536
+        # Warn if out of range, and clamp into range. Shouldn't be needed, but just in case.
+        if pos < 0:
+            print(f"INTERNAL ERROR: pos < 0 should never happen, but pos = {pos}")
+            pos = 0
+        elif pos > 65535:
+            print(f"INTERNAL ERROR: pos > 65535 should never happen, but pos = {pos}")
+            pos = 65535
         self.controller.connection.write_out([85, 85, 8, 3, 1, (time_ms&0xff), ((time_ms>>8)&0xff), self.sid, (pos&0xff), ((pos>>8)&0xff)])
         self.controller.vieweronly.write_out([85, 85, 8, 3, 1, (time_ms&0xff), ((time_ms>>8)&0xff), self.sid, (pos&0xff), ((pos>>8)&0xff)])
     def set_position_radians(self, rad, time=None):
@@ -76,6 +86,13 @@ class Servo:
         rad = self.radian_range[0] + (hex - self.position_range[0]) * rad_span / hex_span
         return rad
     def hex_from_radians(self, rad):
+        # Check and warn if rad is outside our known valid range, for it back into range.
+        if rad < self.radian_range[0]:
+            print(f"ERROR: OUT OF RANGE: joint={self.jid} sid={self.sid} {self.name} rad={rad} valid_range={self.radian_range[0]}...{self.radian_range[1]}")
+            rad = self.radian_range[0]
+        elif self.radian_range[1] < rad:
+            print(f"ERROR: OUT OF RANGE: joint={self.jid} sid={self.sid} {self.name} rad={rad} valid_range={self.radian_range[0]}...{self.radian_range[1]}")
+            rad = self.radian_range[1]
         rad_span = (self.radian_range[1] - self.radian_range[0])
         hex_span = (self.position_range[1] - self.position_range[0])
         hex = self.position_range[0] + int((rad - self.radian_range[0]) * hex_span / rad_span)
