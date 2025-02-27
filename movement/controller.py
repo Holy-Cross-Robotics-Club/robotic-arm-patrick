@@ -201,9 +201,9 @@ class Controller:
         pkt = [ 85, 85, 5+3*n, 3, n, (time_ms&0xff), ((time_ms>>8)&0xff) ]
         for joint, pos in zip(joints, adjusted_clicks):
             pkt = pkt + [ joint.sid, (pos&0xff), ((pos>>8)&0xff) ]
-        self.controller.write_out(pkt)
+        self.write_out(pkt)
     def set_multiple_position_radians(self, joints, rads, time=None):
-        clicks = [joint.hex_from_radians(rad) for rad in rads]
+        clicks = [joint.hex_from_radians(rad) for joint, rad in zip(joints, rads)]
         self.set_multiple_position_hex(joints, clicks, time)
         return clicks
     def q_current_radians(self):

@@ -177,9 +177,6 @@ if __name__ == "__main__":
         q_delta, err = calculate_joint_angles_delta(q_current, cart_target, step_size)
         q_new = np.array(q_current) + q_delta
         print_pos(q_current, end_pos, err, q_new)
-        arm.joints[0].set_position_radians(q_new[0], servo_time)
-        arm.joints[1].set_position_radians(q_new[1], servo_time)
-        arm.joints[2].set_position_radians(q_new[2], servo_time)
-        arm.joints[3].set_position_radians(q_new[3], servo_time)
+        arm.set_multiple_position_radians(arm.joints[0:4], q_new[0:4], servo_time)
 
     arm.disconnect()
