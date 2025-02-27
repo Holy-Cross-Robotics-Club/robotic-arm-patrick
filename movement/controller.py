@@ -147,6 +147,13 @@ class Controller:
         n = len(joints)
         pkt = [85, 85, 3+n, 21, n] + [joint.sid for joint in joints]
         result = self.write_then_read_in(pkt, 21, 1 + 3*n)
+        if not result:
+            # retry? Sometimes one of the servos fails to respond, leading to a size mismatch
+            clock.sleep(0.020) # 20ms delay
+            result = self.write_then_read_in(pkt, 21, 1 + 3*n)
+            if not result:
+                printf("FATAL ERROR, two servo failures in a row")
+                sys.exit(1)
         if result[0] != n:
             print(f"ERROR: expecting count {n}, but got count {result[0]}")
         pos = [ ]
@@ -220,6 +227,8 @@ class Controller:
         d2 = q[2] * 180/np.pi
         d3 = q[3] * 180/np.pi
         return "[ base = %4.0d°  shoulder = %4.0d°  elbow = %4.0d°  wrist = %4.0d° ]" % (d0, d1, d2, d3)
+    def is_moving(self):
+        return any([joint.is_moving() for joint in self.joints])
     def qToString(self, q):
         """ Takes an nparray of radian angles, returns a nice string showing both hex and degrees """
         d0 = q[0] * 180/np.pi

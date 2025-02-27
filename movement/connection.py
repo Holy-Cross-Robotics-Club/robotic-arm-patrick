@@ -42,7 +42,7 @@ class Connection:
             print(f"USB ERROR: results have bad header, got {data[0]} {data[1]}")
             return None
         if data[2] != tot_size-2 or data[3] != cmd:
-            print(f"USB ERROR: results expected len {tot_size-2} and cmd {cmd}, but {data[2]} and {data[3]}")
+            print(f"USB ERROR: results expected len {tot_size-2} and cmd {cmd}, but got {data[2]} and {data[3]}")
             return None
         if len(data) != tot_size:
             print(f"USB ERROR: results expected {tot_size} total bytes, got {len(data)} bytes")
