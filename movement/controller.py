@@ -27,7 +27,6 @@ class Servo:
         self.curr_set_pos = None
     def get_position_hex(self):
         self.controller.connection.write_out([85, 85, 4, 21, 1, self.sid])
-        self.controller.vieweronly.write_out([85, 85, 4, 21, 1, self.sid])
         result = self.controller.connection.read_in(21, 6)
         unsigned_clicks = (result[3] * 256 + result[2])
         #return unsigned_clicks

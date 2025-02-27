@@ -24,9 +24,10 @@ _parameters_ is info about which motor(s) to query.
 Responses from the robot are the same, but they don't have the _command_, the
 _payload_ just has whatever response values there are.
 
-The full message has a 2-byte prefix consisting of 0x55, 0x55, then a length
-byte, followed by the _payload_. The length byte doesn't count the prefix, so it
-is 1 more than the length of the payload.
+The full message has a 2-byte header consisting of 0x55, 0x55. This is followed
+by a length byte, followed by the _payload_. The length byte doesn't count the
+prefix, but it does count itself, so it is 1 more than the length of the
+payload.
 
     [   0x55,   0x55,  _LEN_,  _CMD_, ... more bytes here for the parameters ]
     | <-- prefix --> |        | <--------- this part is the payload -------> |
@@ -58,12 +59,12 @@ The message is encoded as:
 
     [ 0x55, 0x55, _LEN_, _CMD_, _N_, _T_(lo), _T_(hi), _i1_, _P1_(lo), _P1_(hi), ... _iN_, _PN_(lo), _PN_(hi) ]
 
- _LEN_ is the total number of bytes in the payload, NOT INCLUDING the 0x55, 0x55, _LEN_ part.
+ _LEN_ is the total number of bytes in the payload, NOT INCLUDING the 0x55, 0x55, part.
  _CMD_ is 3 for "move servos".
 
 Example:
 
-    [ 0x55, 0x55,  7,    3,        1,       0, 5,         2,           0, 3       ]
+    [ 0x55, 0x55,  8,    3,        1,       0, 5,         2,           0, 3       ]
       HEADER WITH LEN  "move"  one motor   5*256+0 ms   servo#2    3*256+0 units
     
 
@@ -81,12 +82,12 @@ The message is encoded as:
 
     [ 0x55, 0x55, _LEN_, _CMD_, _N_, _i1_, ... _iN_ ]
 
- _LEN_ is the total number of bytes in the payload, NOT INCLUDING the 0x55, 0x55, _LEN_ part.
+ _LEN_ is the total number of bytes in the payload, NOT INCLUDING the 0x55, 0x55 part.
  _CMD_ is 21 for "query servo position".
 
 Example:
 
-    [ 0x55, 0x55,  3,    21,        1,         2     ]
+    [ 0x55, 0x55,  4,    21,        1,         2     ]
       HEADER WITH LEN  "query"  one motor   servo#2
 
 # Response from query to get motor position(s)
@@ -102,6 +103,6 @@ Where:
 
 Example:
 
-    [ 0x55, 0x55,  7,    1,          2,          0, 3     ]
+    [ 0x55, 0x55,  5,    1,          2,          0, 3     ]
       HEADER WITH LEN  one motor  servo#2    3*256+0 units
 
