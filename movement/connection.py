@@ -29,11 +29,25 @@ class Connection:
         cnt = self.connection.write(m)
         if cnt != len(m):
             print(f"USB ERROR: result={err} after writing {len(m)} bytes {m}")
-    def read_in(self, cmd, num_bytes):
-        data = self.connection.read(4 + num_bytes)
-        if data[0] == 85 and data[1] == 85 and data[2] == num_bytes and data[3] == cmd:
-            return data[4:]
-        else: return None
+    def read_in(self, cmd, return_param_size):
+        tot_size = 4 + return_param_size # 0x55 0x55 len cmd ... followed by return_params
+        data = self.connection.read(4 + return_param_size)
+        if not data:
+            print("USB ERROR: expecting cmd results, got nothing")
+            return None
+        if len(data) < 4:
+            print(f"USB ERROR: expecting at least 4 bytes of results, got {len(data)} bytes")
+            return None
+        if data[0] != 85 or data[1] != 85:
+            print(f"USB ERROR: results have bad header, got {data[0]} {data[1]}")
+            return None
+        if data[2] != tot_size-2 or data[3] != cmd:
+            print(f"USB ERROR: results expected len {tot_size-2} and cmd {cmd}, but {data[2]} and {data[3]}")
+            return None
+        if len(data) != tot_size:
+            print(f"USB ERROR: results expected {tot_size} total bytes, got {len(data)} bytes")
+            return None
+        return data[4:]
 
 class DeadEnd:
     """ An alternative implementation of Connection that does nothing. """

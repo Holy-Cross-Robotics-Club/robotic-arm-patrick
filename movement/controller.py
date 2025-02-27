@@ -26,9 +26,11 @@ class Servo:
         self.controller = controller
         self.curr_set_pos = None
     def get_position_hex(self):
-        self.controller.connection.write_out([85, 85, 4, 21, 1, self.sid])
-        result = self.controller.connection.read_in(21, 6)
-        unsigned_clicks = (result[3] * 256 + result[2])
+        pkt = [85, 85, 4, 21, 1, self.sid]
+        count, sid, lo, hi = self.controller.write_then_read_in(pkt, 21, 4)
+        if count != 1 or sid != self.sid:
+            print(f"ERROR: expecting count 1, sid {self.sid}, but got count {count}, sid {sid}")
+        unsigned_clicks = hi * 256 + lo
         #return unsigned_clicks
         signed_clicks = unsigned_clicks if unsigned_clicks <= 32767 else unsigned_clicks - 65536
         return signed_clicks
@@ -44,14 +46,14 @@ class Servo:
         if self.curr_set_pos is None:
             return False
         diff = abs(self.get_position_hex() - self.curr_set_pos)
-        print(f"DEBUG: joint={self.jid} {self.name} current={self.get_position_hex()} target={self.curr_set_pos}")
+        # print(f"DEBUG: joint={self.jid} {self.name} current={self.get_position_hex()} target={self.curr_set_pos}")
         return False if diff <= 16 else True
     def set_position_hex(self, pos, time=None):
         self.curr_set_pos = pos
         if time is None:
             time = self.default_time
         time_ms = max(1, min(65535, int(time)))
-        print(f"DEBUG: joint={self.jid} sid={self.sid} {self.name} current={self.get_position_hex()} target={self.curr_set_pos} time={time_ms}")
+        # print(f"DEBUG: joint={self.jid} sid={self.sid} {self.name} current={self.get_position_hex()} target={self.curr_set_pos} time={time_ms}")
         # IMPORTANT: Whenever we call get_position, then immediately try to write data to the arm,
         # the second command seems to fail. There needs to be a 10ms or larger delay. This
         # doesn't seem to be documented anywhere.
@@ -66,8 +68,7 @@ class Servo:
         elif pos > 65535:
             print(f"INTERNAL ERROR: pos > 65535 should never happen, but pos = {pos}")
             pos = 65535
-        self.controller.connection.write_out([85, 85, 8, 3, 1, (time_ms&0xff), ((time_ms>>8)&0xff), self.sid, (pos&0xff), ((pos>>8)&0xff)])
-        self.controller.vieweronly.write_out([85, 85, 8, 3, 1, (time_ms&0xff), ((time_ms>>8)&0xff), self.sid, (pos&0xff), ((pos>>8)&0xff)])
+        self.controller.write_out([85, 85, 8, 3, 1, (time_ms&0xff), ((time_ms>>8)&0xff), self.sid, (pos&0xff), ((pos>>8)&0xff)])
     def set_position_radians(self, rad, time=None):
         hex = self.hex_from_radians(rad)
         self.set_position_hex(hex, time)
@@ -133,6 +134,78 @@ class Controller:
     def home(self):
         for joint in self.joints:
             joint.set_position_radians(0, 5)
+    def write_out(self, pkt):
+        self.connection.write_out(pkt)
+        self.vieweronly.write_out(pkt)
+    def write_then_read_in(self, pkt, cmd, payload_len):
+        self.connection.write_out(pkt)
+        return self.connection.read_in(cmd, payload_len)
+    def get_multiple_position_hex(self, joints):
+        """ Returns multiple positions in clicks """
+        if not joints:
+            return [ ]
+        n = len(joints)
+        pkt = [85, 85, 3+n, 21, n] + [joint.sid for joint in joints]
+        result = self.write_then_read_in(pkt, 21, 1 + 3*n)
+        if result[0] != n:
+            print(f"ERROR: expecting count {n}, but got count {result[0]}")
+        pos = [ ]
+        for i in range(len(joints)):
+            sid, lo, hi = result[1+3*i:1+3*i+3]
+            if sid != joints[i].sid:
+                print(f"ERROR: expecting sid {joints[i].sid}, but got sid {sid}")
+            unsigned_clicks = hi * 256 + lo
+            signed_clicks = unsigned_clicks if unsigned_clicks <= 32767 else unsigned_clicks - 65536
+            pos.append(signed_clicks)
+        return pos
+    def get_multiple_position_radians(self, joints):
+        """ Returns multiple positions in radians """
+        clicks = self.get_multiple_position_hex(joints)
+        return [joint.hex_to_radians(clicks) for joint, clicks in zip(joints, clicks)]
+    def get_multiple_position(self, joints):
+        """ Returns multiple positions in all three units: clicks, radians, and degrees """
+        clicks = self.get_multiple_position_hex(joints)
+        rads = [joint.hex_to_radians(clicks) for joint, clicks in zip(joints, clicks)]
+        degs = [np.degrees(rad) for rad in rads]
+        return clicks, rads, degs
+    def set_multiple_position_hex(self, joints, clicks, time=None):
+        default_time = time
+        adjusted_clicks = []
+        if not joints:
+            return
+        n = len(joints)
+        for joint, pos in zip(joints, clicks):
+            joint.curr_set_pos = pos
+            if default_time is None:
+                default_time = joint.default_time
+            else:
+                default_time = min(default_time, joint.default_time)
+            # Convert signed hex values to unsigned 
+            if pos < 0:
+                pos = pos + 65536
+            # Warn if out of range, and clamp into range. Shouldn't be needed, but just in case.
+            if pos < 0:
+                print(f"INTERNAL ERROR: pos < 0 should never happen, but pos = {pos}")
+                pos = 0
+            elif pos > 65535:
+                print(f"INTERNAL ERROR: pos > 65535 should never happen, but pos = {pos}")
+                pos = 65535
+            adjusted_clicks.append(pos)
+        if time is None:
+            time = default_time
+        time_ms = max(1, min(65535, int(time)))
+        # IMPORTANT: Whenever we call get_position, then immediately try to write data to the arm,
+        # the second command seems to fail. There needs to be a 10ms or larger delay. This
+        # doesn't seem to be documented anywhere.
+        clock.sleep(0.020) # 20ms delay, sending move command after reading position fails if done too quickly??
+        pkt = [ 85, 85, 5+3*n, 3, n, (time_ms&0xff), ((time_ms>>8)&0xff) ]
+        for joint, pos in zip(joints, adjusted_clicks):
+            pkt = pkt + [ joint.sid, (pos&0xff), ((pos>>8)&0xff) ]
+        self.controller.write_out(pkt)
+    def set_multiple_position_radians(self, joints, rads, time=None):
+        clicks = [joint.hex_from_radians(rad) for rad in rads]
+        self.set_multiple_position_hex(joints, clicks, time)
+        return clicks
     def q_current_radians(self):
         """ Returns a numpy array with radian angles of all joints """
         return np.array([joint.get_position_radians() for joint in self.joints])

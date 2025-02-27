@@ -91,7 +91,7 @@ if __name__ == "__main__":
     arm = Controller(use_arm, use_sim)
     arm.connect()
 
-    q_current = np.array([joint.get_position_radians() for joint in arm.joints])
+    q_current = np.array(arm.get_multiple_position_radians(arm.joints))
     end_pos = calculate_end_pos(q_current)
 
     print_pos(q_current, end_pos, 100.0)
@@ -150,7 +150,7 @@ if __name__ == "__main__":
     print_pos(q_current, end_pos, preverr)
     while True:
         clock.sleep(step_time)
-        q_current = np.array([joint.get_position_radians() for joint in arm.joints])
+        q_current = np.array(arm.get_multiple_position_radians(arm.joints))
         end_pos = calculate_end_pos(q_current)
         err = np.linalg.norm(cart_target - end_pos)
         print_pos(q_current, end_pos, err)

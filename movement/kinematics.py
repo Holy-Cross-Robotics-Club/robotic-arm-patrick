@@ -182,8 +182,8 @@ def calculate_joint_angles_delta(q_current, target, step_size=0.175):
         targetAngle -= pi
     baseAngle = q_current[0]
     baseDelta = targetAngle - baseAngle # np.clip(targetAngle - baseAngle, -step_size, step_size)
-    print("target base angle %.3f deg, current base %.3f deg, move %.3f deg" % (
-        np.degrees(targetAngle), np.degrees(baseAngle), np.degrees(baseDelta)))
+    # print("target base angle %.3f deg, current base %.3f deg, move %.3f deg" % (
+    #     np.degrees(targetAngle), np.degrees(baseAngle), np.degrees(baseDelta)))
     # Before rest of calculations, modify q_current to reflect where the
     # base will eventually be rotated to.
     # q_current = q_current.copy()
@@ -216,11 +216,11 @@ def calculate_joint_angles_delta(q_current, target, step_size=0.175):
     # Normalize q_delta so we move approx step_size_adjusted radians total across all joints
     q_delta = (q_delta / np.linalg.norm(q_delta)) * step_size_adjusted
 
-    print(f"err = %.2f mm from target position" % (err*1000))
-    print("step size = approx %.3f degrees total across all servos" % (step_size_adjusted * 180/pi))
-    print("q_delta = [ %6.2f°  %6.2f°  %6.2f°  %6.2f°  %6.2f°  %6.2f° ]" % (
-        q_delta[0]*180/pi, q_delta[1]*180/pi, q_delta[2]*180/pi,
-        q_delta[3]*180/pi, q_delta[4]*180/pi, q_delta[5]*180/pi))
+    # print(f"err = %.2f mm from target position" % (err*1000))
+    # print("step size = approx %.3f degrees total across all servos" % (step_size_adjusted * 180/pi))
+    # print("q_delta = [ %6.2f°  %6.2f°  %6.2f°  %6.2f°  %6.2f°  %6.2f° ]" % (
+    #     q_delta[0]*180/pi, q_delta[1]*180/pi, q_delta[2]*180/pi,
+    #     q_delta[3]*180/pi, q_delta[4]*180/pi, q_delta[5]*180/pi))
     
     return q_delta, err
 

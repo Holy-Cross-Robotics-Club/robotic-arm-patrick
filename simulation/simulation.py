@@ -108,16 +108,23 @@ class Simulation:
         print(f"Closed TCP connection to simulation at {arm_addr}")
     def write_out(self, m):
         sendmsg(self.connection, bytes(m))
-    def read_in(self, cmd, num_bytes):
+    def read_in(self, cmd, return_param_size):
+        tot_size = 4 + return_param_size # 0x55 0x55 len cmd ... followed by return_params
         data = recvmsg(self.connection)
         if not data:
+            print("SIM ERROR: expecting cmd results, got nothing")
             return None
         if len(data) < 4:
-            print(f"Error, not enough data for header, length tag, and cmd byte")
+            print(f"SIM ERROR: expecting at least 3 bytes of results, got {len(data)} bytes")
             return None
-        if data[0] == 85 and data[1] == 85 and data[2] == num_bytes and data[3] == cmd:
-            return data[4:]
-        else:
-            print(f"Error, wanted 2+{num_bytes} and cmd {cmd} but have {len(data)} bytes of data")
+        if data[0] != 85 or data[1] != 85:
+            print(f"SIM ERROR: results have bad header, got {data[0]} {data[1]}")
             return None
+        if data[2] != tot_size-2 or data[3] != cmd:
+            print(f"SIM ERROR: results expected len {tot_size-2} and cmd {cmd}, but {data[2]} and {data[3]}")
+            return None
+        if len(data) != tot_size:
+            print(f"SIM ERROR: results expected {tot_size} total bytes, got {len(data)} bytes")
+            return None
+        return data[4:]
 

@@ -64,7 +64,6 @@ if __name__ == "__main__":
 
     if not any(active):
         active = [ True ] * 6
-        print("all active")
 
     while not use_sim and not use_arm:
         print("\nChoose an option:")
