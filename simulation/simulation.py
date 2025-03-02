@@ -61,7 +61,10 @@ async def async_sendmsg(writer, msg):
 
 # Same as recvmsg(), but uses asyncio reader.
 async def async_recvmsg(reader):
-    data = await reader.readexactly(4)
+    try:
+        data = await reader.readexactly(4)
+    except:
+        return None
     if not data:
         return None
     if data[0] != 0xAB or data[1] != 0xCD or data[2] != 0xEF:

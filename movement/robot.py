@@ -41,6 +41,43 @@ def goto_rest(arm):
         clock.sleep(0.1)
 
 def goto(arm, cart_target, hand=None, grip=None, verbose=False):
+    nearby_target, moved = nearest_reachable_point(cart_target)
+    if moved:
+        print(f"NOTE: {cartesianToString(cart_target)} is outside the reach of the arm.")
+        print(f"NOTE: {cartesianToString(nearby_target)} will be targetted instead.")
+        next_print_header = 0
+    #iterative_goto(arm, nearby_target, hand, grip, verbose)
+    direct_goto(arm, nearby_target, hand, grip, verbose=verbose)
+
+def direct_goto(arm, cart_target, hand=None, grip=None, verbose=False):
+
+    q_current = np.array(arm.get_multiple_position_radians(arm.joints))
+    end_pos = calculate_end_pos(q_current)
+    err = np.linalg.norm(cart_target - end_pos)
+
+    q_new = direct_solve(q_current, cart_target, verbose=verbose)
+    if not q_new:
+        print("Target is not within reach. Sorry.")
+        return
+
+    if hand is not None:
+        arm.hand.set_position_radians(hand)
+    if grip is not None:
+        arm.gripper.set_position_radians(grip)
+
+    if verbose:
+        print_pos(q_current, end_pos, err, q_new)
+
+    ms_per_radian = 500 # about 1 second per 30 degrees
+    rad = max([abs(q_current[i] - q_new[i]) for i in range(4)])
+    servo_time = rad * ms_per_radian
+    if verbose:
+        print(f"Moving {np.degrees(rad)} degrees over {servo_time/1000} seconds.")
+    arm.set_multiple_position_radians(arm.joints[0:4], q_new[0:4], servo_time)
+
+    arm.wait_until_stopped()
+
+def iterative_goto(arm, cart_target, hand=None, grip=None, verbose=False):
     # THREE parameters control the speed of the arm movements
     # step_size: (radians) used by the kinematics model as the maximum
     #            amount to move the motors in each step along the gradient.
@@ -61,13 +98,6 @@ def goto(arm, cart_target, hand=None, grip=None, verbose=False):
     # precision = 0.001 # aiming for err < 1mm
     precision = 0.008 # aiming for err < 8mm
 
-    nearby, moved = nearest_reachable_point(cart_target)
-    if moved:
-        print(f"NOTE: {cartesianToString(cart_target)} is outside the reach of the arm.")
-        print(f"NOTE: {cartesianToString(nearby)} will be targetted instead.")
-        cart_target = nearby
-        next_print_header = 0
-
     # start moving
     preverr = 100.0
     stall = 0
@@ -83,8 +113,8 @@ def goto(arm, cart_target, hand=None, grip=None, verbose=False):
         q_current = np.array(arm.get_multiple_position_radians(arm.joints))
         end_pos = calculate_end_pos(q_current)
         err = np.linalg.norm(cart_target - end_pos)
-        if verbose:
-            print_pos(q_current, end_pos, err)
+        #if verbose:
+        #    print_pos(q_current, end_pos, err)
         if err < precision:
             if verbose:
                 print(f"reached target position, err = {err*1000} mm")
@@ -106,19 +136,16 @@ def goto(arm, cart_target, hand=None, grip=None, verbose=False):
             print(f"progress stalled (attemped {stall} of 20) with err {err*1000} mm...")
             stall += 1
         preverr = err
-        q_delta, err = calculate_joint_angles_delta(q_current, cart_target, step_size)
+        q_delta, err = calculate_joint_angles_delta(q_current, cart_target, step_size, verbose=True)
         q_new = np.array(q_current) + q_delta
         if verbose:
             print_pos(q_current, end_pos, err, q_new)
         arm.set_multiple_position_radians(arm.joints[0:4], q_new[0:4], servo_time)
 
     if hand is not None:
-        while arm.hand.is_moving():
-            clock.sleep(step_time)
+        arm.hand.wait_until_stopped()
     if grip is not None:
-        while arm.gripper.is_moving():
-            clock.sleep(step_time)
-
+        arm.gripper.wait_until_stopped()
 
 
 if __name__ == "__main__":
@@ -211,6 +238,6 @@ if __name__ == "__main__":
     # adjust target so it is within reach
     cart_target = np.transpose(np.array(dest_coords))
   
-    goto(arm, cart_target, verbose=True)
+    goto(arm, cart_target, verbose=False)
 
     arm.disconnect()

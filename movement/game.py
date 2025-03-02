@@ -100,16 +100,18 @@ if __name__ == "__main__":
         elif cup == "REST":
             goto_rest(arm)
         else:
-            goto(arm, [x, y, 0.14], hand=0.0, grip=90.0) # closed grip
+            goto(arm, [x, y, 0.14], hand=0.0, grip=pi/2) # closed grip
     elif action == "pickup":
         goto(arm, [x, y, 0.12], hand=0.0, grip=0.0) # open grip, above table
         goto(arm, [x, y, 0.04], hand=0.0, grip=0.0) # open grip, down
-        goto(arm, [x, y, 0.04], hand=0.0, grip=90.0) # closed grip, down
-        goto(arm, [x, y, 0.12], hand=0.0, grip=90.0) # closed grip, above table
+        goto(arm, [x, y, 0.04], hand=0.0, grip=2.0) # partly closed grip, down
+        clock.sleep(0.3)
+        goto(arm, [x, y, 0.12], hand=0.0, grip=2.0) # partly closed grip, above table
         goto_rest(arm)
     elif action == "drop":
-        goto(arm, [x, y, 0.12], hand=0.0, grip=90.0) # closed grip, above table
-        goto(arm, [x, y, 0.04], hand=0.0, grip=90.0) # closed grip, down
+        goto(arm, [x, y, 0.12], hand=0.0, grip=2.0) # partly closed grip, above table
+        goto(arm, [x, y, 0.04], hand=0.0, grip=2.0) # partly closed grip, down
+        clock.sleep(0.3)
         goto(arm, [x, y, 0.04], hand=0.0, grip=0.0) # open grip, down
         goto(arm, [x, y, 0.12], hand=0.0, grip=0.0) # open grip, above table
         goto_rest(arm)

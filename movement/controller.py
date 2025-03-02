@@ -25,6 +25,8 @@ class Servo:
         self.__target_position = None
         self.controller = controller
         self.curr_set_pos = None
+        self.last_pos = None
+        self.stasis = 10
     def get_position_hex(self):
         pkt = [85, 85, 4, 21, 1, self.sid]
         count, sid, lo, hi = self.controller.write_then_read_in(pkt, 21, 4)
@@ -43,12 +45,32 @@ class Servo:
         deg = np.degrees(rad)
         return clicks, rad, deg
     def is_moving(self):
-        if self.curr_set_pos is None:
+        cur_pos = self.get_position_hex() 
+        if self.curr_set_pos is not None:
+            diff = abs(cur_pos - self.curr_set_pos)
+            # print(f"DEBUG: joint={self.jid} {self.name} current={self.get_position_hex()} target={self.curr_set_pos}")
+            if diff <= 16:
+                return False
+        if self.last_pos is None:
+            self.last_pos = cur_pos
+            self.stasis = 0
             return False
-        diff = abs(self.get_position_hex() - self.curr_set_pos)
-        # print(f"DEBUG: joint={self.jid} {self.name} current={self.get_position_hex()} target={self.curr_set_pos}")
-        return False if diff <= 16 else True
+        else:
+            diff = cur_pos - self.last_pos
+            self.last_pos = cur_pos
+            if diff == 0:
+                self.stasis += 1
+                if self.stasis > 10:
+                    return True
+            else:
+                self.stasis = 0
+                return False
+    def wait_until_stopped(self):
+        while self.is_moving():
+            clock.sleep(0.05) # 50 ms
     def set_position_hex(self, pos, time=None):
+        self.last_pos = None
+        self.stasis = 0
         self.curr_set_pos = pos
         if time is None:
             time = self.default_time
@@ -229,6 +251,9 @@ class Controller:
         return "[ base = %4.0d°  shoulder = %4.0d°  elbow = %4.0d°  wrist = %4.0d° ]" % (d0, d1, d2, d3)
     def is_moving(self):
         return any([joint.is_moving() for joint in self.joints])
+    def wait_until_stopped(self):
+        while self.is_moving():
+            clock.sleep(0.05) # 50 ms
     def qToString(self, q):
         """ Takes an nparray of radian angles, returns a nice string showing both hex and degrees """
         d0 = q[0] * 180/np.pi

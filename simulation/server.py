@@ -31,10 +31,11 @@ cmin = [ 0 ] + [ parameters.joint_min_clk[i] for i in [5, 4, 3, 2, 1, 0] ]
 cmax = [ 0 ] + [ parameters.joint_max_clk[i] for i in [5, 4, 3, 2, 1, 0] ]
 cval = [ int((lo + hi) / 2) for lo, hi in zip(cmin, cmax) ]
 ctgt = cval.copy()
+cstp = [ 0 ] * 7
 rmin = [ 0 ] + [ parameters.joint_min_rad[i] for i in [5, 4, 3, 2, 1, 0] ]
 rmax = [ 0 ] + [ parameters.joint_max_rad[i] for i in [5, 4, 3, 2, 1, 0] ]
 
-acceleration = 100
+time_step = 0.1 # seconds, for physics looop and animation
 
 # make a json bundle with parameters to give to javascript in browser
 json = '{ "cmin" : %s, "cmax" : %s, "rmin": %s, "rmax": %s, "d1": %s, "a2": %s, "a3": %s, "d5": %s }' % (
@@ -46,7 +47,7 @@ async def physics_loop():
         count = 0
         for j in range(1, 7):
             delta = ctgt[j] - cval[j]
-            amt = max(-acceleration, min(delta, acceleration))
+            amt = max(-cstp[j], min(delta, cstp[j]))
             if amt != 0:
                 count += 1
                 cval[j] += amt
@@ -66,7 +67,7 @@ async def physics_loop():
         # else:
         #     print("ctgt = " + str(ctgt))
         #     print("cval = " + str(cval))
-        await asyncio.sleep(0.2)
+        await asyncio.sleep(time_step)
     print("Physics loop done")
 
 async def process_usb_report(msg):
@@ -93,6 +94,8 @@ async def process_usb_report(msg):
         t = (t_hi << 8) | t_lo
         if debug:
             print(f"  time = {t}")
+        if t == 0:
+            t = 1
         for i in range(nservos):
             axis = msg[2+5+3*i+0] if 2+5+3*i+0 < len(msg) else 0
             p_lo = msg[2+5+3*i+1] if 2+5+3*i+1 < len(msg) else 0
@@ -105,6 +108,7 @@ async def process_usb_report(msg):
                 if debug:
                     print(f"  move axis {axis} from {cval[axis]} towards position {p}")
                 ctgt[axis] = max(cmin[axis], min(cmax[axis], p))
+                cstp[axis] = int(abs(ctgt[axis] - cval[axis])/t * time_step * 1000)
                 print("target positions: " + ' '.join(f'{b:4d}' for b in ctgt[1:]))
             elif debug:
                 print(f"  axis {axis} already at position {p}")

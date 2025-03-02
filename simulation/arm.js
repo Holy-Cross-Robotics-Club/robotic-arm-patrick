@@ -66,12 +66,12 @@ let a3 = fromMeters(0.095); //  meters, distance between elbow joint and wrist j
 let d5 = fromMeters(0.160); //  meters, distance between wrist joint and an imaginary point between fingers
 let axes = [ 'grip', 'hand', 'wrist', 'elbow', 'shoulder', 'base' ];
 let joints = {
-    grip:     { id: 1, name: "grip",      cmin: 155, cmax:  666, cini: 432,  dmin:   0,       dmax:  180,     doff: 0, orientation: +0.25  },
-    hand:     { id: 2, name: "hand",      cmin: 120, cmax:  880, cini: 488,  dmin:  -90.0,    dmax:  90.0,    doff: 0, orientation: -1  },
-    wrist:    { id: 3, name: "wrist",     cmin:  70, cmax:  930, cini: 492,  dmin:  -103.476, dmax:  103.476, doff: 0, orientation: +1  },
-    elbow:    { id: 4, name: "elbow",     cmin:  10, cmax:  990, cini: 498,  dmin:  -119.118, dmax:  119.118, doff: 0, orientation: -1  },
-    shoulder: { id: 5, name: "shoulder",  cmin: 144, cmax:  880, cini: 512,  dmin:  -90.0,    dmax:  90.0,    doff: 0, orientation: +1  },
-    base:     { id: 6, name: "base",      cmin:   0, cmax: 1000, cini: 504,  dmin:  -120.321, dmax:  120.321, doff: 0, orientation: +1  },
+    grip:     { id: 1, name: "grip",      cmin: 155, cmax:  666, cini: 432,  dmin:   0,       dmax:  180,     doff: -140, orientation: -0.4  },
+    hand:     { id: 2, name: "hand",      cmin: 120, cmax:  880, cini: 488,  dmin:  -90.0,    dmax:  90.0,    doff: 90,  orientation: -1  },
+    wrist:    { id: 3, name: "wrist",     cmin:  70, cmax:  930, cini: 492,  dmin:  -103.476, dmax:  103.476, doff: 0,   orientation: +1  },
+    elbow:    { id: 4, name: "elbow",     cmin:  10, cmax:  990, cini: 498,  dmin:  -119.118, dmax:  119.118, doff: 0,   orientation: -1  },
+    shoulder: { id: 5, name: "shoulder",  cmin: 144, cmax:  880, cini: 512,  dmin:  -90.0,    dmax:  90.0,    doff: 0,   orientation: +1  },
+    base:     { id: 6, name: "base",      cmin:   0, cmax: 1000, cini: 504,  dmin:  -120.321, dmax:  120.321, doff: 0,   orientation: +1  },
 };
 
 // Scene setup
@@ -87,6 +87,7 @@ document.body.appendChild(renderer.domElement);
 const controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
+controls.zoomSpeed = 0.3;
 controls.screenSpacePanning = false;
 controls.minDistance = 5;
 controls.maxDistance = 50;
@@ -345,8 +346,8 @@ function setJointClicks(j, value) { // returns angle of joint in radians
     joint.cval = Math.max(joint.cmin, Math.min(joint.cmax, value));
     const deg = toDegrees(joint);
     const odeg = deg + joint.doff;
-    joint.display.textContent = `${joint.cval} (${odeg.toFixed(2)}${degree})`;
-    return THREE.MathUtils.degToRad(deg) * joint.orientation;
+    joint.display.textContent = `${joint.cval} (${deg.toFixed(2)}${degree})`;
+    return THREE.MathUtils.degToRad(odeg) * joint.orientation;
 }
 
 // User interaction
@@ -495,11 +496,18 @@ function configure() {
             let rmin = data.rmin;
             let rmax = data.rmax;
             for (let j in joints) {
-                j.cmin = cmin[j.id];
-                j.cmax = cmax[j.id];
-                j.cini = Math.round((j.cmin + j.cmax)/2);
-                j.dmin = rmin[j.id] * 180/Math.PI;
-                j.dmax = rmax[j.id] * 180/Math.PI;
+                const joint = joints[j]
+                joint.cmin = cmin[joint.id];
+                joint.cmax = cmax[joint.id];
+                joint.cini = Math.round((joint.cmin + joint.cmax)/2);
+                console.log(`Servo ${joint.id} range was ${joint.dmin} to ${joint.dmax} radians`);
+                joint.dmin = rmin[joint.id] * 180/Math.PI;
+                joint.dmax = rmax[joint.id] * 180/Math.PI;
+                if (joint.slider) {
+                    joint.slider.min = joint.cmin;
+                    joint.slider.max = joint.cmax;
+                }
+                console.log(`          new range is ${joint.dmin} to ${joint.dmax} radians`);
             }
             buildrobot();
             connect();
