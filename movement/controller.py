@@ -50,27 +50,32 @@ class Servo:
             diff = abs(cur_pos - self.curr_set_pos)
             # print(f"DEBUG: joint={self.jid} {self.name} current={self.get_position_hex()} target={self.curr_set_pos}")
             if diff <= 16:
+                # print(f"joint {self.jid} reached target")
                 return False
         if self.last_pos is None:
             self.last_pos = cur_pos
             self.stasis = 0
-            return False
+            # print(f"joint {self.jid} stasis = 0")
+            return True
         else:
             diff = cur_pos - self.last_pos
             self.last_pos = cur_pos
             if diff == 0:
                 self.stasis += 1
                 if self.stasis > 10:
-                    return True
+                    # print(f"joint {self.jid} stasis = {self.stasis} > 0")
+                    return False
             else:
+                # print(f"joint {self.jid} stasis = 0")
                 self.stasis = 0
-                return False
+                return True
     def wait_until_stopped(self):
         while self.is_moving():
             clock.sleep(0.05) # 50 ms
     def set_position_hex(self, pos, time=None):
         self.last_pos = None
         self.stasis = 0
+        # print(f"joint {self.jid} stasis = 0")
         self.curr_set_pos = pos
         if time is None:
             time = self.default_time

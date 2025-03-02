@@ -40,22 +40,22 @@ def goto_rest(arm):
     while arm.is_moving():
         clock.sleep(0.1)
 
-def goto(arm, cart_target, hand=None, grip=None, verbose=False):
+def goto(arm, cart_target, attack=None, hand=None, grip=None, verbose=False):
     nearby_target, moved = nearest_reachable_point(cart_target)
     if moved:
         print(f"NOTE: {cartesianToString(cart_target)} is outside the reach of the arm.")
         print(f"NOTE: {cartesianToString(nearby_target)} will be targetted instead.")
         next_print_header = 0
     #iterative_goto(arm, nearby_target, hand, grip, verbose)
-    direct_goto(arm, nearby_target, hand, grip, verbose=verbose)
+    direct_goto(arm, nearby_target, attack, hand, grip, verbose=verbose)
 
-def direct_goto(arm, cart_target, hand=None, grip=None, verbose=False):
+def direct_goto(arm, cart_target, attack=None, hand=None, grip=None, verbose=False):
 
     q_current = np.array(arm.get_multiple_position_radians(arm.joints))
     end_pos = calculate_end_pos(q_current)
     err = np.linalg.norm(cart_target - end_pos)
 
-    q_new = direct_solve(q_current, cart_target, verbose=verbose)
+    q_new = direct_solve(q_current, cart_target, attack=attack, verbose=verbose)
     if not q_new:
         print("Target is not within reach. Sorry.")
         return
@@ -68,7 +68,10 @@ def direct_goto(arm, cart_target, hand=None, grip=None, verbose=False):
     if verbose:
         print_pos(q_current, end_pos, err, q_new)
 
-    ms_per_radian = 500 # about 1 second per 30 degrees
+    #ms_per_radian = 500 # about 1 second per 30 degrees
+    ms_per_radian = 750 # about 1.5 second per 30 degrees
+    #ms_per_radian = 1000 # about 2 second per 30 degrees
+    #ms_per_radian = 1500 # about 3 second per 30 degrees
     rad = max([abs(q_current[i] - q_new[i]) for i in range(4)])
     servo_time = rad * ms_per_radian
     if verbose:
@@ -76,8 +79,9 @@ def direct_goto(arm, cart_target, hand=None, grip=None, verbose=False):
     arm.set_multiple_position_radians(arm.joints[0:4], q_new[0:4], servo_time)
 
     arm.wait_until_stopped()
+    print("STILL")
 
-def iterative_goto(arm, cart_target, hand=None, grip=None, verbose=False):
+def iterative_goto(arm, cart_target, attack=None, hand=None, grip=None, verbose=False):
     # THREE parameters control the speed of the arm movements
     # step_size: (radians) used by the kinematics model as the maximum
     #            amount to move the motors in each step along the gradient.
@@ -107,6 +111,8 @@ def iterative_goto(arm, cart_target, hand=None, grip=None, verbose=False):
         arm.hand.set_position_radians(hand)
     if grip is not None:
         arm.gripper.set_position_radians(grip)
+
+    # TODO: if angle-of-attack is not None, include it in kinematics
 
     while True:
         clock.sleep(step_time)
@@ -164,8 +170,8 @@ if __name__ == "__main__":
             use_arm = True
         elif arg in ["--help", "-?"]:
             print("Usage:")
-            print("  ./robot.py [options] home           # go to x=0.0 y=0.0 z=0.5, in meters")
-            print("  ./robot.py [options] goto x y z     # go to coordinates, in meters")
+            print("  ./robot.py [options] home                 # go to x=0.0 y=0.0 z=0.5, in meters")
+            print("  ./robot.py [options] goto x y z [attack]  # go to coordinates, in meters, w/w/o attack angle, in degrees")
             print("  ./robot.py [options] move dx dy dz  # move a distance, in meters")
             print("Note: underscore '_' can be used to omit a coordinate. For example:")
             print("   ./robot --sim goto _ _ 0.5    # in simulation, leave x, y alone, go to z=0.5")
@@ -213,14 +219,16 @@ if __name__ == "__main__":
 
     print_pos(q_current, end_pos, 100.0)
 
+    a = None
     if len(action) == 0 or action[0] == "favorite":
         dest_coords = [0.1, 0.1, 0.2] # an arbitrary favorite position
     elif len(action) == 1 and action[0] == "home":
         dest_coords = [0.0, 0.0, 0.5]
-    elif len(action) == 4 and action[0] == "goto":
+    elif len(action) == 4 or len(action) == 5 and action[0] == "goto":
         x = end_pos[0] if action[1] == '_' else float(action[1])
         y = end_pos[1] if action[2] == '_' else float(action[2])
         z = end_pos[2] if action[3] == '_' else float(action[3])
+        a = np.radians(float(action[4])) if len(action) == 5 else None
         dest_coords = [x, y, z]
     elif len(action) == 4 and action[0] == "move":
         dx = 0.0 if action[1] == '_' else float(action[1])
@@ -238,6 +246,6 @@ if __name__ == "__main__":
     # adjust target so it is within reach
     cart_target = np.transpose(np.array(dest_coords))
   
-    goto(arm, cart_target, verbose=False)
+    goto(arm, cart_target, attack=a, verbose=False)
 
     arm.disconnect()

@@ -60,11 +60,11 @@ if __name__ == "__main__":
         sys.exit(1)
 
     if cup == "A":
-        x,y = 0.15, 0.15
+        x,y = 0.26, 0.20
     elif cup == "B":
-        x,y = 0.15, 0.00
+        x,y = 0.26, 0.00
     elif cup == "C":
-        x,y = 0.15, -0.15
+        x,y = 0.26, -0.20
     elif cup == "UP":
         x,y = 0.0, 0.0 # ignored
     elif cup == "REST":
@@ -102,17 +102,17 @@ if __name__ == "__main__":
         else:
             goto(arm, [x, y, 0.14], hand=0.0, grip=pi/2) # closed grip
     elif action == "pickup":
-        goto(arm, [x, y, 0.12], hand=0.0, grip=0.0) # open grip, above table
-        goto(arm, [x, y, 0.04], hand=0.0, grip=0.0) # open grip, down
-        goto(arm, [x, y, 0.04], hand=0.0, grip=2.0) # partly closed grip, down
+        goto(arm, [x, y, 0.12], attack=[-0.05, 0.05], hand=0.0, grip=0.0) # open grip, above table
+        goto(arm, [x, y, 0.07], attack=0.0, hand=0.0, grip=0.0) # open grip, down
+        goto(arm, [x, y, 0.07], attack=0.0, hand=0.0, grip=2.0) # partly closed grip, down
         clock.sleep(0.3)
         goto(arm, [x, y, 0.12], hand=0.0, grip=2.0) # partly closed grip, above table
         goto_rest(arm)
     elif action == "drop":
-        goto(arm, [x, y, 0.12], hand=0.0, grip=2.0) # partly closed grip, above table
-        goto(arm, [x, y, 0.04], hand=0.0, grip=2.0) # partly closed grip, down
+        goto(arm, [x, y, 0.12], attack=[-0.05, 0.05], hand=0.0, grip=2.0) # partly closed grip, above table
+        goto(arm, [x, y, 0.07], attack=0.0, hand=0.0, grip=2.0) # partly closed grip, down
         clock.sleep(0.3)
-        goto(arm, [x, y, 0.04], hand=0.0, grip=0.0) # open grip, down
+        goto(arm, [x, y, 0.07], attack=0.0, hand=0.0, grip=0.0) # open grip, down
         goto(arm, [x, y, 0.12], hand=0.0, grip=0.0) # open grip, above table
         goto_rest(arm)
 

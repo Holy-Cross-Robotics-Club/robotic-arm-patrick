@@ -277,13 +277,22 @@ def circle_intersection_points(x1, y1, r1, x2, y2, r2):
 
     return ([(x3, y3), (x4, y4)], True)
 
-def direct_solve(q_current, target, verbose=False):
+def direct_solve(q_current, target, attack=None, verbose=False):
     """ Directly compute the joint angles corresponding to a given cartesian target.
 
     This doesn't use the jacobian or DH formulation at all, and it makes no
     attempt at straight-line motion. Instead, it takes advantage of specific
     limitations in the arm to directly compute the final target angles that
     match the cartesian x, y, z coordinates.
+
+    If an angle of attack is provided as a float, or a (low, high) range, then
+    only that angle or range of angles will be considered. As a parameter, an
+    attack angle is defined as:
+      0 is parallel to the table stretching outward away from the origin,
+      pi/2 is stretching up towards the sky,
+      -pi/2 has the the gripper is pointing down,
+      pi, or -pi, has the gripper pointing towards the origin,
+      and so on.
 
     For the base rotation, there is a closed form solution:
     * As a special case, if (x, y) is (0, 0), then we leave the base angle
@@ -328,25 +337,32 @@ def direct_solve(q_current, target, verbose=False):
     sx, sy = 0, d1
 
     # First, calculate optimal base rotation angle. This is solved directly.
+    backwards = False
     if tx == 0 and ty == 0:
         a_b = q_current[0] # if origin, leave the base angle alone
     else:
         a_b = math.atan2(ty, tx) # else, find plane passing through x, y
         if a_b < joint_min_rad[0]:
             a_b += pi
-            px = -px
+            backwards = True
         elif joint_max_rad[0] < a_b:
             a_b -= pi
-            px = -px
+            backwards = True
+
+    if backwards:
+        px = -px
 
     if verbose:
         print(f"Target point {px} {py}")
         print(f"Shoulder point {sx} {sy}")
 
+    # Note: in all of the below, attack angle is direction the gripper points,
+    # measured counter-clockwise from the x axis within the plane of movement.
+
     # Function to calculate joint angles for a given angle of attack, and boolean to indicate validity
     def joint_angles(a, verbose=False):
         # Wrist joint within plane.
-        wx, wy = px + d5 * np.cos(a), py + d5 * np.sin(a)
+        wx, wy = px - d5 * np.cos(a), py - d5 * np.sin(a)
         # Find possible elbow joint points
         pts, valid = circle_intersection_points(sx, sy, a2, wx, wy, a3)
         # print(pts, valid)
@@ -416,10 +432,22 @@ def direct_solve(q_current, target, verbose=False):
             # print(f"AoA {a} --> penalty {penalty*1000} mm distance, err {err} for invalid angles {angles}")
         return err
 
-    # Next, search all angles of attack, optimize fitness.
-    a, _ = golden_grid_search(fitness, -pi, pi)
-    if verbose:
-        print(f"Best angle of attack is {np.degrees(a)} degrees")
+    # Note: here we need to adjust the angle of attack so it is relative to the
+    # plane of movement, which might be backwards.
+    if attack is None:
+        attack = (-pi, pi)
+    elif backwards and (isinstance(attack, tuple) or isinstance(attack, list)):
+        attack = (attack[0] + pi, attack[1] + pi)
+    elif backwards:
+        attack = attack + pi
+
+    if isinstance(attack, tuple) or isinstance(attack, list):
+        # Next, search all angles of attack, optimize fitness.
+        a, _ = golden_grid_search(fitness, attack[0], attack[1])
+        if verbose:
+            print(f"Best angle of attack is {np.degrees(a)} degrees")
+    else:
+        a = attack
     
     # Calculate angles
     angles, valid = joint_angles(a, verbose=False)
