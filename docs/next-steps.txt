@@ -1,0 +1,9 @@
+Checklist for the future:
+- Create functions to simplify actions (e.g "PickUpCup" to simplify process of movement & picking up objects)
+- Vision
+- Tuning programs for smooth motion
+- Reach target -> Stop
+- Bug Oscillation
+- Documentation/Cleanup
+- Control signal improvement
+- Game?
