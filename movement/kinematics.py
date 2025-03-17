@@ -14,6 +14,8 @@ def xform_matrix(i, theta_i):
       i = integer from 1 to 5
       theta_i = current angle of joint i, in radians, where typically
                 joint_min_rad[i-1] <= theta_i <= joint_max_rad[i-1]
+
+      returns: np.ndarray - 4x4 transformation matrix
     """
     offset, alpha, a, d = dh_params[i-1]
     theta = offset + theta_i
