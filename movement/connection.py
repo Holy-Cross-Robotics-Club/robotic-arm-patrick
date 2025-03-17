@@ -8,6 +8,10 @@ class Connection:
         self.connection = None
         self.info = None
     def connect(self, pid, vid):
+        """ 
+        Connect to a USB HID device with the specified product ID (pid) and vendor ID (vid). 
+        Enumerates all connected USB HID devices, matches against the given PID and VID. if found, opens a connection to the device.
+        """
         devs = hid.enumerate()
         for d in devs:
             if d['product_id'] == int(pid) and d['vendor_id'] == int(vid):
