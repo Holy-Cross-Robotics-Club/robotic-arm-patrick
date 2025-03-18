@@ -1,0 +1,106 @@
+Brief description of programs in the movement folder. 
+
+calibrate.py:
+  
+      Script serves as a robotic arm calibration tool. It allows a user to:
+       - Select a joint to control manually (e.g., base, shoulder, elbow, wrist, hand, gripper).
+       - Send movement commands to a selected joint.
+       - Monitor the joint’s current position in clicks, radians, and degrees.
+       - Control the physical robotic arm, the simulation, or both.
+       - Accept command-line arguments to specify configuration options.
+       - The script uses the Controller class to manage servo connections and movements.
+
+Connection.py
+
+  Provides a USB HID communication wrapper using the hid library. It defines two classes:
+    - Connection: A real implementation that allows connecting to a USB HID device, sending (write_out) and receiving (read_in) messages,and                   closing the connection.
+    - DeadEnd: A dummy implementation that mimics Connection but does nothing, useful for cases where a real USB device is unavailable.
+
+controller.py:
+
+      Interfaces with a robotic arm via HID-USB communication or simulation, allowing servo control and kinematics calculations.
+
+        - Servo Class: Manages individual servos (base, shoulder, elbow, wrist, hand, gripper). It reads and writes positions in different                          formats: clicks (hex), radians, and degrees.
+        - Controller Class: Handles multiple servos, manages connections, initializes hardware or simulation mode, and provides functions                                for retrieving and setting joint positions.
+
+kinematics.py:
+
+      Implements kinematics and inverse kinematics calculations for a robotic arm using Denavit-Hartenberg (DH) parameters. 
+          
+      List of functions w/summary:
+
+          xform_matrix(i, theta_i): Computes the 4×4 transformation matrix for a given joint using Denavit-Hartenberg parameters.
+              Inputs: i (joint index 1 to 5), theta_i (joint angle in radians).
+              Output: 4×4 matrix describing the position and orientation of the joint.
+                
+          anthroarm_dm(q): Computes forward kinematics for the robotic arm.
+              Inputs: q (list of joint angles [theta1, theta2, ..., theta6] in radians).
+              Outputs: p (end-effector position [x, y, z]), a (direction vector of final link), s (side vector perpendicular to a), n                               (normal vector perpendicular to both a and s).
+                
+          calculate_end_pos(q_current): Extracts the end-effector position from anthroarm_dm(q).
+              Inputs: q_current (current joint angles).
+              Output: End-effector position [x, y, z].
+                
+          anthroarm_diff(q): Computes the Jacobian matrix, which relates joint velocities to end-effector velocities
+              Inputs: q (current joint angles [theta1, ..., theta6]).
+              Output: J (Jacobian matrix, used for inverse kinematics).
+                
+          cartesianToString(pos): Converts a position vector [x, y, z] to a formatted string in millimeters.
+              Inputs: pos (3D coordinate [x, y, z] in meters).
+              Output: Formatted string showing position in millimeters.
+          calculate_joint_angles_delta(q_current, target, step_size=0.175): Computes joint angle adjustments to move the arm towards target.
+              Inputs: q_current (current joint angles), target (desired end-effector position [x, y, z]), step_size
+              Outputs: q_delta (computed angle adjustments), err (remaining error in distance to target).
+             
+          nearest_reachable_point(target): Ensures the target is within the arm’s reach.
+              Inputs: target (desired end-effector position [x, y, z]).
+              Outputs: nearby (adjusted target position within reach), moved (boolean flag indicating if the target was adjusted).
+
+monitor.py:
+
+     Parses command-line arguments to determine:
+        - If it should use simulation, real hardware, or both.
+        - If a specific joint was selected.
+        - If a movement delay was specified.
+
+      If no options were provided, prompts the user to choose between Simulation, Hardware, or Both.
+      Initializes the robotic arm (Controller) and connects to it.
+      Prompts the user to choose a joint (if not preselected via CLI).
+
+      Enters a loop:
+         - Displays the current joint position.
+         - Waits for movement to complete.
+         - Asks the user for a new angle and moves the joint.
+
+parameters.py:
+
+     Denotes ranges of clicks that different joints can move from - is used for control in other movement programs. 
+     Also denotes range of movement via DH (Denavit-Hardenberg) parameters
+
+Robot.py:
+
+     This function allows for specific movement instruction via "goto x y z", "home", and "move dx dy dz"
+
+     print_pos provides updates for user during movement, displaying: 
+          - Joint angles (base, shoulder, elbow, wrist)
+          - End-effector position (x, y, z)
+          - Error measurement (distance from target)
+          - Target joint angles 
+
+      
+    
+
+           
+Denavit-Hardenberg Parameters:
+
+    Each robotic joint is described by four parameters:
+
+        - θ (theta) → Joint angle (rotation around the z-axis).
+        - d → Link offset (distance along the z-axis).
+        - a → Link length (distance along the x-axis).
+        - α (alpha) → Link twist (rotation around the x-axis).
+    
+     The parameters define a 4×4 transformation matrix representing positions and orientations of one joint relative to another.
+     
+
+  
