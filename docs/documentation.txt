@@ -20,8 +20,8 @@ controller.py:
 
       Interfaces with a robotic arm via HID-USB communication or simulation, allowing servo control and kinematics calculations.
 
-        - Servo Class: Manages individual servos (base, shoulder, elbow, wrist, hand, gripper). It reads and writes positions in different                          formats: clicks (hex), radians, and degrees.
-        - Controller Class: Handles multiple servos, manages connections, initializes hardware or simulation mode, and provides functions                                for retrieving and setting joint positions.
+        - Servo Class: Manages individual servos (base, shoulder, elbow, wrist, hand, gripper). It reads and writes positions in different formats: clicks (hex), radians, and                               degrees.
+        - Controller Class: Handles multiple servos, manages connections, initializes hardware or simulation mode, and provides functions for retrieving and setting joint positions.
 
 kinematics.py:
 
@@ -86,10 +86,6 @@ Robot.py:
           - End-effector position (x, y, z)
           - Error measurement (distance from target)
           - Target joint angles 
-
-      
-    
-
            
 Denavit-Hardenberg Parameters:
 
