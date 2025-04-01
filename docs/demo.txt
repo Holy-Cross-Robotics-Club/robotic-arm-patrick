@@ -1,0 +1,18 @@
+Demo.txt
+
+Purpose: Familiarize user with basic functionality using the robot arm
+
+Activating the server.py / simulation.py window:
+    python3 -m venv ~/xarm-python-venv         
+    source ~/xarm-python-venv/bin/activate    
+    pip install -r requirements.txt
+
+Note: May need to run the following : pip uninstall hid
+                                      pip install hid api Cython
+
+DEMO:
+Format to run basic controls: python3 controller.py goto x y z
+Demo to test connection - python3 controller.py goto 0 0 1 -> should put the arm in an upright position
+
+
+  
