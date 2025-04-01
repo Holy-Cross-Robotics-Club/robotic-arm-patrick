@@ -7,6 +7,8 @@ Activating the server.py / simulation.py window:
     source ~/xarm-python-venv/bin/activate    
     pip install -r requirements.txt
 
+See more in simulation.py
+
 Note: May need to run the following : pip uninstall hid
                                       pip install hid api Cython
 
