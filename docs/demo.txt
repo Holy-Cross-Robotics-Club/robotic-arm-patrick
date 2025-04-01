@@ -14,5 +14,7 @@ DEMO:
 Format to run basic controls: python3 controller.py goto x y z
 Demo to test connection - python3 controller.py goto 0 0 1 -> should put the arm in an upright position
 
+#Include pickupcup function
+
 
   
