@@ -16,6 +16,13 @@ DEMO:
 Format to run basic controls: python3 controller.py goto x y z
 Demo to test connection - python3 controller.py goto 0 0 1 -> should put the arm in an upright position
 
+Robot.py activation: 1. robot.py arm
+                     2. Can also use robot.py goto 0 0 1 OR goto home synonymously with controller.py goto x y z
+                            - 'home' coordinates: (0, 0, 0.5)
+                     3. Can use robot.py move x y z to view scope of movement, familiarize with unit movement
+                     4. Note: robot.py move x _ _  will only move the arm in the x-direction, same can be done for y and z motions.
+
+
 #Include pickupcup function
 
 
