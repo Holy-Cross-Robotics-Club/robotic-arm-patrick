@@ -179,7 +179,7 @@ class Controller:
             clock.sleep(0.020) # 20ms delay
             result = self.write_then_read_in(pkt, 21, 1 + 3*n)
             if not result:
-                printf("FATAL ERROR, two servo failures in a row")
+                print("FATAL ERROR, two servo failures in a row")
                 sys.exit(1)
         if result[0] != n:
             print(f"ERROR: expecting count {n}, but got count {result[0]}")
