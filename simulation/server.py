@@ -1,5 +1,49 @@
 #!/usr/bin/env python3
 
+# This is a standalone program, implementing a simulation of a virtual robotic
+# arm, and providing an API to control the arm from other programs. 
+#
+# See README.md in this directory for details on installing and running. The
+# programs in the movement folder will start the server as needed, or give
+# instructions on how to start it.
+# 
+# The code below has several parts:
+#
+#  - A "physics" simulation of the xArm itself. Basically, we just keep a set of
+#    values corresponding to joint angles. These are updated according to a very
+#    primitive physics/motor simulation. For example, if some angle is currently
+#    X degrees, but the user wants it to be Y degress, then X will be adjusted
+#    incrementally to be closer to Y. The physics could be improved, modeling
+#    acceleration, etc., but for now, just a simple animation is enough.
+#
+#  - A "controller" simulation of the xArm's control board. This code tries to
+#    mimic the behavior of the controller board on the xArm, accepting the same
+#    movement and query commands, and sending back the same responses as the
+#    real xArm. This tries to use essentially the same protocol, byte-for-byte,
+#    as the real arm.
+#
+# - A "browser-facing" web-server, allowing for an in-browser html/javascript
+#   visualization of the arm's state. There are three parts to this:
+#
+#   1. When the browser fetches "/index.html" or "/arm.js", or other assets,
+#      over HTTP on port 8000, those files are sent back to the browser.
+#
+#   2. The asset "/parameters.json" is special. For this one, a special json
+#      object is sent to the browser containing all the DH parameters for the
+#      robot arm.
+#
+#   3. The resulting page uses javascript to also open a websocket from the
+#      browser back to this server on port 8001. This connection is used to
+#      query and update the joint angles. In other words, it allows updates to
+#      the joint angles to be sent back to the browser, or for user input to
+#      come from the browser back to the simulation to control the joins.
+#
+# - A "client-facing" tcp-server, allowing for other python code to connect and
+#   either query or update the joint angles. The protocol used here is nearly
+#   identical to the protocol python would use to interact with the real xArm,
+#   except it doesn't use USB/USB-HID, it uses a TCP socket instad.
+
+
 import asyncio
 from aiohttp import web
 import websockets
@@ -21,21 +65,36 @@ http_port = 8000
 ws_port = 8001
 arm_port = 8002
 
+# The DH parameter table and current angle values are stored in the following
+# lists. These come from parameters.py, but they might look like:
 # servo    -      1     2     3     4     5     6
 # joint    -      5     4     3     2     1     0
 # cmin = [ 0,   155,  120,   70,   10,  144,    0 ]
 # cmax = [ 0,   666,  880,  930,  990,  880, 1000 ]
 # cval = [ 0,   432,  488,  492,  498,  512,  504 ]
 # ctgt = [ 0,   432,  488,  492,  498,  512,  504 ]
+#
+# Note: position 0 in the array is unused, since there is no server number 0. We
+# also reverse the arrays in parameter.py, so they are ordered by servo number
+# here instead of by joint number.
+
+# cmin and cmax are the range of valid click values for each joint.
 cmin = [ 0 ] + [ parameters.joint_min_clk[i] for i in [5, 4, 3, 2, 1, 0] ]
 cmax = [ 0 ] + [ parameters.joint_max_clk[i] for i in [5, 4, 3, 2, 1, 0] ]
+# cval is the current position of each joint, in clicks
 cval = [ int((lo + hi) / 2) for lo, hi in zip(cmin, cmax) ]
+# ctgt is the desired position of each joint, in clicks, e.g. as set by the
+# motion commands sent by the user.
 ctgt = cval.copy()
+# cstp controls speed, as the maximum number of clicks to move a motor in each
+# step of the physics simulation, as determined by the speed parameter of the
+# motion commands sent by the user.
 cstp = [ 0 ] * 7
+# rmin and rmax are the range of reachable angles, in radians, for each joint.
 rmin = [ 0 ] + [ parameters.joint_min_rad[i] for i in [5, 4, 3, 2, 1, 0] ]
 rmax = [ 0 ] + [ parameters.joint_max_rad[i] for i in [5, 4, 3, 2, 1, 0] ]
 
-time_step = 0.1 # seconds, for physics looop and animation
+time_step = 0.1 # seconds, for physics loop and animation
 
 # make a json bundle with parameters to give to javascript in browser
 json = '{ "cmin" : %s, "cmax" : %s, "rmin": %s, "rmax": %s, "d1": %s, "a2": %s, "a3": %s, "d5": %s }' % (

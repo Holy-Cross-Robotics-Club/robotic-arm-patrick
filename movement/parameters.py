@@ -1,3 +1,22 @@
+
+# This file stores the dh-parameter table, along with other physical parameters
+# for the xArm robot arm. This file is meant to serve as a single definitive
+# place to put the parameters, which can be included in other python programs.
+# That way we avoid having multiple copies of the parameters, which will get out
+# of sync as the parameters are adjusted or fine-tuned.
+#
+# The program in simulation/server.py uses these parameters as part of it's
+# internal physics simulation of the arm. That program also passes these along
+# to the browser-based visualization, which uses them to draw the arm as a 3D
+# animation.
+#
+# The programs in movement/*.py all use these parameters as part of their
+# kinematics code, etc.
+#
+# Note: This file appears twice, to keep python imports happy and simple:
+#   movement/parameters.py    -- this actual file
+#   simulation/parameters.py  -- a symlink (shortcut) to the actual file
+
 import numpy as np
 
 pi = np.pi

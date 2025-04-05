@@ -1,40 +1,11 @@
+// This javascript code is part of the interactive browser-based visualization
+// for the simulated robot arm. Given a set of angles, it displays a 3D
+// visualization of the arm. It also has controls that allow the user to send
+// motion commands back to the server, setting new target joint angles.
+// This code is loaded into the browser by arm.html.
 
-// Two different physical parameters, from two sources...
-// One of these is clearly wrong. This second one has no consistent clicks-per-degree measurement.
-
-// Joint limits and units adapted from:
-// https://xarm-lewansoul-ros.readthedocs.io/en/latest/user_guide/1_2_software_description.html
+// This picture included here only for quick reference. See docs/dh-notes.txt for details.
 //
-// Servo positions are in arbitrary units, which I'll call clicks.
-// - There seem to be about 4 clicks per degree, or 40 clicks in 10 degrees.
-// - So 60 degrees, around 1 radian, is around 240 clicks.
-// - A right angle, or pi/2 radians, is around 360 clicks.
-//
-//         ---Clicks----    -----------Radians-----------   ------------Degrees-------------
-// Joint   Min  Ctr  Max        Min      Ctr      Max           Min       Ctr        Max       Name
-//   1      ??   ??   ??         ??       ?       ??            ??          ?        ??         ??
-//   2      50  590  995   -2.174948760   0   1.631211570   -124.61538460   0    93.46153845    ??
-//   3     100  510  950   -1.740612146   0   1.867974010    -99.72972973   0   107.02702700    ??
-//   4      50  500  950   -1.910427965   0   1.910427965   -109.45945950   0   109.45945950    ??
-//   5     135  510  950   -1.592023304   0   1.867974010    -91.21621620   0   107.02702700    ??
-//   6      50  467  900   -1.735157797   0   1.801734595    -99.41721856   0   103.23178810    ??
-
-// Alternative joint limits and units adopted from robotic-arm-patrick/movement/controller.py
-//
-//         ---Clicks----    -----------Radians-----------   ------------Degrees-------------
-// Joint   Min  Ctr  Max        Min      Ctr      Max           Min       Ctr        Max       Name
-//   1     160  432  704      -pi/2       0      +pi/2          -90        0          90       grip
-//   2     128  488  848      -pi         0      +pi           -180        0         180       hand
-//   3      58  492  927      -3pi/4      0      +3pi/4        -135        0         135       wrist
-//   4       4  498  993      -3pi/4      0      +3pi/4        -135        0         135       elbow
-//   5     144  512  880      -pi/2       0      +pi/2          -90        0          90       shoulder
-//   6       0  504 1008      -pi         0      +pi           -180        0         180       base
-//
-//  # Robot Morphological Parameters
-//  a2 = 0.155  # Length of link 2 (shoulder -> elbow) # units are meters?
-//  d4 = 0.096  # Length of link 4 (elbow -> wrist)    # units are meters?
-//  d6 = 0.100  # Length of link 6 (wrist -> end)      # units are meters?
-
 //                                    _           , . ,    <-- imaginary end point
 //         grip finger length .......|            \   /
 //                 +                 |_            \_/     <-- (Servo 1) Grip joint, open/close
