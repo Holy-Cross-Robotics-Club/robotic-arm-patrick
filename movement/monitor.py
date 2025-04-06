@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 
+# This is a top-level program.
+#
 # This does not move the servos, it only monitors their positions and uses the
-# kinematics model to compute the x,y,z coordinates of the end-effector.
+# kinematics model to compute the x,y,z coordinates of the end-effector. It is
+# mostly useful for debugging, and perhaps for calibration.
 
 from controller import Controller
 from connection import Connection
 from simulation import Simulation
-from kinematics import *
+from direct_kinematics import *
 import time as clock
 import sys
 

@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 
+# A top-level program for helping calibrate the robot arm.
+#
 # This moves only one joint at a time, allowing you to repeatedly specify an
 # angle (in degrees) to test the calibration of that joint.
 
 from controller import Controller
 from connection import Connection
 from simulation import Simulation
-from kinematics import *
 import time as clock
+import numpy as np
 import sys
 
 if __name__ == "__main__":

@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+# Top-level program to play a simple game, or part of one anywya.
+#
 # This uses the kinematics model to make high-level moves.
 # There are 3 "cup" positions, A, B, C.
 # It can pick up a cup from any position, or put it down in any position.
@@ -8,7 +10,6 @@ from controller import Controller
 from connection import Connection
 from simulation import Simulation
 import numpy as np
-from kinematics import *
 import time as clock
 from robot import goto, goto_rest
 import sys
@@ -29,9 +30,9 @@ if __name__ == "__main__":
             use_arm = True
         elif arg in ["--help", "-?"]:
             print("Usage:")
-            print("  ./robot.py [options] point A        # point at cup position A (or B or C, or UP, or REST)")
-            print("  ./robot.py [options] pickup A       # pick up the cup at position A (or B or C)")
-            print("  ./robot.py [options] drop A         # drop cup at position A (or B or C)")
+            print("  ./game.py [options] point A        # point at cup position A (or B or C, or UP, or REST)")
+            print("  ./game.py [options] pickup A       # pick up the cup at position A (or B or C)")
+            print("  ./game.py [options] drop A         # drop cup at position A (or B or C)")
             print("Options:")
             print("  --sim          ... open the browser-based simulation")
             print("  --arm          ... connect to the physical robot arm")
@@ -48,8 +49,8 @@ if __name__ == "__main__":
 
     if len(args) != 2:
         print("Missing arguments")
-        print("Maybe try: ./robot.py --arm pickup A")
-        print("Or try:    ./robot --help")
+        print("Maybe try: ./game.py --arm pickup A")
+        print("Or try:    ./game.py --help")
         sys.exit(1)
 
     action, cup = args
@@ -80,14 +81,14 @@ if __name__ == "__main__":
         choice = input("Enter your choice, or hit enter to use both: ").strip().lower()
         if choice == "sim":
             use_sim = True
-            print("NOTE: in future, you can use './main.py --sim' to skip this menu.")
+            print("NOTE: in future, you can use './game.py --sim' to skip this menu.")
         elif choice == "arm":
             use_arm = True
-            print("NOTE: in future, you can use './main.py --arm' to skip this menu.")
+            print("NOTE: in future, you can use './game.py --arm' to skip this menu.")
         elif choice in [ "", "both" ]:
             use_sim = True
             use_arm = True
-            print("NOTE: in future, you can use './main.py --both' to skip this menu.")
+            print("NOTE: in future, you can use './game.py --both' to skip this menu.")
         else:
             print("Sorry, that's not an option. Type 'sim' or 'arm' or 'both'.")
 

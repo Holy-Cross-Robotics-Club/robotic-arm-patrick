@@ -1,3 +1,12 @@
+# simulation.py
+#
+# This code provides a Simulation object, with the same API as the Connection
+# object from connection.py. But instead of sending data to a real robot arm, it
+# sends data to a simulation instead. See the simulation directory for details.
+#
+# The controller.py code is designed to work with either Connection, Simulation,
+# DeadEnd, or a combination of two of these.
+
 import socket
 import sys
 

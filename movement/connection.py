@@ -1,5 +1,21 @@
 import hid
 
+# This code provides two classes:
+# - Connection is uused to communicate over USB to a robot arm. This is used
+#   by other files to send motion commands or queries to the actual robot.
+# - DeadEnd does nothing, but provides the same API. This can be used to plug
+#   into code that needs a Connection object when you don't actualy want to send
+#   any commands annywhere.
+#
+# The data sent to/from the robot needs to be in a very specific format,
+# following the robot communication protocol. But this code only does some basic
+# checks on the data, e.g. parsing the first few bytes of a response to see how
+# large a data packet is. It is up to callers to ensure you send the right byte
+# sequences in the right order.
+#
+# The controller.py code is designed to work with either Connection, Simulation,
+# DeadEnd, or a combination of two of these.
+
 class Connection:
     """ Simple wrapper for hidapi.
     Intended to read and write OUT/IN reports easily.

@@ -1,6 +1,24 @@
+# controller.py
+#
+# Note: This file is maybe mis-named? It does not implement code for motion
+# planning, doesn't use the kinematics models or anything like that.
+#
+# This code is for interfacing to the robot arm control board and/or a simulated
+# robot arm. It provides a Controller object, containing six Servo objects. The
+# servos can be operated on individually, or the Controller can execute batched
+# commands across a set of servos.
+#
+# The goal here is to provide a higher level API for interacting with the arm,
+# hiding the details of the byte-stream USB protocol the robot actually
+# requires.
+#
+# This code can interface to a real arm, or to a simulated arm (see simulation
+# directory), or both simultaneously. If both are active, then the movement
+# commands are sent to both, but query commands go to the real arm.
+
 from connection import Connection, DeadEnd
 from simulation import Simulation
-from kinematics import *
+from parameters import *
 import time as clock
 import sys
 

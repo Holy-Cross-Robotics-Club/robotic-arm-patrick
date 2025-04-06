@@ -1,13 +1,46 @@
 #!/usr/bin/env python3
 
-# This uses the kinematics model to move the arm, given x,y,z coordinates.
+# This is a top-level program that uses the kinematics model to move the arm,
+# given x,y,z coordinates. It can also be included in other programs as a
+# library of path-planning function.
+# 
+# Note: This file is maybe misleadingly named? Maybe this is better thought of
+# as the "controller" half of a "controller+kinematics" motion planning approach.
+#
+# goto() is the primary function here. Given a target x,y,z point in space, and
+# optionally some other parameters. It then:
+#  - calls out to the kinematics model to figure out the joint angles needed.
+#  - calls out to controller.py to move the actual arm.
+#  - uses a control/feedback loop, if needed, to ensure it reaches the target.
+#
+# Two different motion-planning approaches are implemented:
+#
+#  - "shortcut" motion planning, using shortcut_kinematics.py, this amounts to:
+#    1. Calculate the final motor positions corresponding to the target.
+#    2. Turn *all* the motors on, sending them directly to those positions.
+#    3. Wait for motors to arrive. That's it. No iteration here.
+#
+#  - "iterative" motion planning, using standard_kinematics.py, this amounts to:
+#    1. Calculate the joint-space vector pointing (in cartesian space) towards the
+#       target.
+#    2. Move motors in that direction a small step.
+#    3. Repeat, iteratively, using feedback to monitor progress.
+#    4. If the arm stalls, then move back to some home/rest position and try
+#       again. This might happen if the model is trying to exceed a joint limit,
+#       or if we get trapped in a singularity.
+#    5. If we stall out too many times, give up.
+#
+# Other motion-planning approaches are possible and have been discussed.
 
 from controller import Controller
 from connection import Connection
 from simulation import Simulation
-from kinematics import *
+from direct_kinematics import *
+from shortcut_kinematics import shortcut_solve
+from standard_kinematics import calculate_joint_angles_delta
 import time as clock
 import sys
+
 
 next_print_header = 0
 def print_pos(q_current, end_pos, err, q_new=None):
@@ -40,22 +73,39 @@ def goto_rest(arm):
     while arm.is_moving():
         clock.sleep(0.1)
 
-def goto(arm, cart_target, attack=None, hand=None, grip=None, verbose=False):
+def goto(arm, cart_target, attack=None, hand=None, grip=None, strategy="shortcut", verbose=False):
     nearby_target, moved = nearest_reachable_point(cart_target)
     if moved:
         print(f"NOTE: {cartesianToString(cart_target)} is outside the reach of the arm.")
         print(f"NOTE: {cartesianToString(nearby_target)} will be targetted instead.")
         next_print_header = 0
-    #iterative_goto(arm, nearby_target, hand, grip, verbose)
-    direct_goto(arm, nearby_target, attack, hand, grip, verbose=verbose)
+    if strategy == "shortcut":
+        shortcut_goto(arm, nearby_target, attack, hand, grip, verbose=verbose)
+    elif strategy == "standard":
+        iterative_goto(arm, nearby_target, hand, grip, verbose)
+    else:
+        print(f"ERR: bad strategy {strategy}")
+        # TODO: other strategies are possible, like:
+        #  - a "modified-standard" (or "planar-standard"?) strategy, that uses a
+        #    shortcut approach for the base rotation, and a standard
+        #    jacobian-style model in 2D for all the other servos.
+        #  - an "iterative-shortcut" strategy, by plotting a sequence of points
+        #    in cartesian space, then using the shortcut_kinematics to traverse
+        #    each point.
+        #  - a "biased-standard" strategy, using standard_kinematics but biasing
+        #    the results towards the center-position of each motor, or otherwise
+        #    adjusting the results to avoid singularties and joint limits.
+        #  - a "planning" strategy, where we evaluate possible paths
+        #    through cartesian space, pick a favorite one, then use one of the
+        #    kinematics models to follow the path.
 
-def direct_goto(arm, cart_target, attack=None, hand=None, grip=None, verbose=False):
+def shortcut_goto(arm, cart_target, attack=None, hand=None, grip=None, verbose=False):
 
     q_current = np.array(arm.get_multiple_position_radians(arm.joints))
     end_pos = calculate_end_pos(q_current)
     err = np.linalg.norm(cart_target - end_pos)
 
-    q_new = direct_solve(q_current, cart_target, attack=attack, verbose=verbose)
+    q_new = shortcut_solve(q_current, cart_target, attack=attack, verbose=verbose)
     if not q_new:
         print("Target is not within reach. Sorry.")
         return
@@ -158,6 +208,7 @@ if __name__ == "__main__":
 
     use_sim = False
     use_arm = False
+    strategy = None
 
     cmd_idx = None
     for i, arg in enumerate(sys.argv[1:]):
@@ -168,6 +219,8 @@ if __name__ == "__main__":
         elif arg == "--both":
             use_sim = True
             use_arm = True
+        elif arg.startswith("--strategy="):
+            _, _, strategy = arg.partition("=")
         elif arg in ["--help", "-?"]:
             print("Usage:")
             print("  ./robot.py [options] home                 # go to x=0.0 y=0.0 z=0.5, in meters")
@@ -180,6 +233,8 @@ if __name__ == "__main__":
             print("  --sim          ... open the browser-based simulation")
             print("  --arm          ... connect to the physical robot arm")
             print("  --both         ... use both the simulation and physical arm")
+            print("  --strategy=X   ... use strategy X for motion planning")
+            print("  --arm          ... connect to the physical robot arm")
             print("  --help, -?     ... show this message")
         elif arg.startswith("-"):
             print(f"Unrecognized option '{arg}'. Try '--help' instead.")
@@ -200,16 +255,25 @@ if __name__ == "__main__":
         choice = input("Enter your choice, or hit enter to use both: ").strip().lower()
         if choice == "sim":
             use_sim = True
-            print("NOTE: in future, you can use './main.py --sim' to skip this menu.")
+            print("NOTE: in future, you can use './robot.py --sim' to skip this menu.")
         elif choice == "arm":
             use_arm = True
-            print("NOTE: in future, you can use './main.py --arm' to skip this menu.")
+            print("NOTE: in future, you can use './robot.py --arm' to skip this menu.")
         elif choice in [ "", "both" ]:
             use_sim = True
             use_arm = True
-            print("NOTE: in future, you can use './main.py --both' to skip this menu.")
+            print("NOTE: in future, you can use './robot.py --both' to skip this menu.")
         else:
             print("Sorry, that's not an option. Type 'sim' or 'arm' or 'both'.")
+
+    if strategy is None:
+        print("\nChoose a motion-planning strategy:")
+        print("  standard  - Use an iterative Jacobian planner")
+        print("  shortcut  - Use the single-step shortcut planner")
+        strategy = input("Enter your choice, or hit enter to use shortcut: ").strip().lower()
+        if strategy == "":
+            strategy = "shortcut"
+        print(f"NOTE: in future, you can use './robot.py --strategy={strategy}' to skip this menu.")
 
     arm = Controller(use_arm, use_sim)
     arm.connect()
@@ -246,6 +310,6 @@ if __name__ == "__main__":
     # adjust target so it is within reach
     cart_target = np.transpose(np.array(dest_coords))
   
-    goto(arm, cart_target, attack=a, verbose=False)
+    goto(arm, cart_target, attack=a, verbose=False, strategy=strategy)
 
     arm.disconnect()
