@@ -14,37 +14,38 @@ class Servo:
     It's okay to print degrees to the console, but don't calculate with it.
     """
     def __init__(self, controller, jid, sid):
-        self.position_range = [None, None]
+        self.position_range = [joint_min_clk[jid - 1], joint_max_clk[jid - 1]]
+        self.radian_range = [joint_min_rad[jid - 1], joint_max_rad[jid - 1]]
         self.jid = jid
         self.sid = sid
-        self.position_range = [joint_min_clk[jid-1], joint_max_clk[jid-1]]
-        self.radian_range =  [joint_min_rad[jid-1], joint_max_rad[jid-1]]
         self.__is_moving = False
         self.__target_position = None
         self.controller = controller
         self.curr_set_pos = None
+
     def get_position_hex(self):
         self.controller.connection.write_out([85, 85, 4, 21, 1, self.sid])
         result = self.controller.connection.read_in(21, 6)
-        hex = (result[3] * 256 + result[2]) # returns hex
-        return hex
+        return result[3] * 256 + result[2]
+
     def get_position_radians(self):
-        return self.hex_to_radians(self.get_position_hex())
+        return clicks_to_radians(self.jid - 1, self.get_position_hex())
+
     def is_moving(self):
         if self.curr_set_pos is None:
             return False
         diff = abs(self.get_position_hex() - self.curr_set_pos)
-        print(f"{self.get_position_hex()} (GET) and {self.curr_set_pos} (SET)")
-        return False if diff <= 16 else True
+        return diff > 16
+
     def set_position_hex(self, pos, time):
-        #clock.sleep(0.03)
         self.curr_set_pos = pos
-        # print(f"Servo {self.sid}: Set position is now {self.curr_set_pos}")
-        self.controller.connection.write_out([85, 85, 8, 3, 1, 0, time, self.sid, (pos&0xff), ((pos>>8)&0xff)])
+        self.controller.connection.write_out([85, 85, 8, 3, 1, 0, time, self.sid, (pos & 0xff), ((pos >> 8) & 0xff)])
+
     def set_position_radians(self, rad, time):
-        hex = self.hex_from_radians(rad)
-        self.set_position_hex(hex, time)
-        return hex
+        hex_val = radians_to_clicks(self.jid - 1, rad)
+        self.set_position_hex(hex_val, time)
+        return hex_val
+    
     def hex_to_radians(self, hex):
         rad_span = (self.radian_range[1] - self.radian_range[0])
         hex_span = (self.position_range[1] - self.position_range[0])
@@ -103,7 +104,7 @@ if __name__ == "__main__":
     while True:
         while arm.wrist.is_moving():
             #q_current = np.array([joint.get_position_radians() for joint in arm.joints])
-            #end_pos = calculate_end_pos(q_current)
+            #_, end_pos, _, _, _ = forward_kinematics(q_current)
             #print(f"  servos = {qToString(q_current)} so end_pos = {cartesianToString(end_pos)}")
             print("moving")
             clock.sleep(0.5)
@@ -121,7 +122,7 @@ if __name__ == "__main__":
     
 
     q_current = np.array([joint.get_position_radians() for joint in arm.joints])
-    end_pos = calculate_end_pos(q_current)
+    _, end_pos, _, _, _ = forward_kinematics(q_current)
     print(f"servos = {qToString(q_current)} so end_pos = {cartesianToString(end_pos)}")
 
     dest_coords = None
@@ -168,7 +169,7 @@ if __name__ == "__main__":
     while True:
         clock.sleep(0.1)
         q_current = np.array([joint.get_position_radians() for joint in arm.joints])
-        end_pos = calculate_end_pos(q_current)
+        _, end_pos, _, _, _ = forward_kinematics(q_current)
         # print(f"servos = {qToString(q_current)} so end_pos = {cartesianToString(end_pos)}")
         if dest_coords:
             err = np.linalg.norm(cart_target - end_pos)
