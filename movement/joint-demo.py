@@ -10,24 +10,29 @@ import time
 import sys
 
 def demo_joint_movement(arm, angle_deg=25, delay=0.5):
-    angle_rad = np.radians(angle_deg)
-
     print("\nStarting fixed joint demo...")
 
-    # Combine all 6: 4 main joints + hand + gripper
-    all_joints = arm.joints + [arm.hand, arm.gripper]
+    # Build unique list of joints (avoid duplicates)
+    all_joints = []
+    seen = set()
+    for joint in arm.joints + [arm.hand, arm.gripper]:
+        if joint.name not in seen:
+            all_joints.append(joint)
+            seen.add(joint.name)
 
     for joint in all_joints:
-        print(f"\nMoving '{joint.name}' to +{angle_deg}°")
+        # Invert direction for shoulder and wrist
+        direction = -1 if joint.name in ["shoulder", "wrist"] else 1
+        angle_rad = np.radians(direction * angle_deg)
+
+        print(f"\nMoving '{joint.name}' to {direction * angle_deg:+}°")
         joint.set_position_radians(angle_rad)
-        while arm.is_moving():
-            time.sleep(0.05)
+        wait_until_all_stopped([joint])
         input("Press Enter to return to 0...")
 
         print(f"Returning '{joint.name}' to 0°")
         joint.set_position_radians(0)
-        while arm.is_moving():
-            time.sleep(0.05)
+        wait_until_all_stopped([joint])
         time.sleep(delay)
 
     print("\nDemo complete.")
