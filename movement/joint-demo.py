@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 
-# This program is designed to ensure that the user's arm is calibrated in the same manner as our code envisions. 
-# The code will have each joint move 30 degrees before returning to neutral (0 degrees) 
-
-import hid
-
 from controller import Controller
 import numpy as np
 import time
 import sys
+
+def wait_until_all_stopped(joints):
+    while any(j.is_moving() for j in joints):
+        time.sleep(0.05)
 
 def demo_joint_movement(arm, angle_deg=25, delay=0.5):
     angle_rad = np.radians(angle_deg)
@@ -21,14 +20,12 @@ def demo_joint_movement(arm, angle_deg=25, delay=0.5):
     for joint in all_joints:
         print(f"\nMoving '{joint.name}' to +{angle_deg}°")
         joint.set_position_radians(angle_rad)
-        while arm.is_moving():
-            time.sleep(0.05)
+        wait_until_all_stopped([joint])
         input("Press Enter to return to 0...")
 
         print(f"Returning '{joint.name}' to 0°")
         joint.set_position_radians(0)
-        while arm.is_moving():
-            time.sleep(0.05)
+        wait_until_all_stopped([joint])
         time.sleep(delay)
 
     print("\nDemo complete.")
