@@ -15,7 +15,12 @@ def demo_joint_movement(arm, angle_deg=25, delay=0.5):
     print("\nStarting fixed joint demo...")
 
     # Combine all 6: 4 main joints + hand + gripper
-    all_joints = arm.joints + [arm.hand, arm.gripper]
+    all_joints = []
+    seen = set()
+    for joint in arm.joints + [arm.hand, arm.gripper]:
+       if joint.name not in seen:
+           all_joints.append(joint)
+           seen.add(joint.name)
 
     for joint in all_joints:
         print(f"\nMoving '{joint.name}' to +{angle_deg}°")
