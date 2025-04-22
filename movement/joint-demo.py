@@ -9,6 +9,10 @@ import numpy as np
 import time
 import sys
 
+def wait_until_all_stopped(joints):
+    while any(j.is_moving() for j in joints):
+        time.sleep(0.05)
+
 def demo_joint_movement(arm, angle_deg=25, delay=0.5):
     print("\nStarting fixed joint demo...")
 
