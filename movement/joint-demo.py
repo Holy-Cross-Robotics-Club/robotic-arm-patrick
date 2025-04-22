@@ -3,8 +3,6 @@
 # This program is designed to ensure that the user's arm is calibrated in the same manner as our code envisions. 
 # The code will have each joint move 30 degrees before returning to neutral (0 degrees) 
 
-import ctypes
-ctypes.CDLL("/opt/homebrew/lib/libhidapi.0.14.0.dylib")
 import hid
 
 from controller import Controller
