@@ -19,12 +19,12 @@ def demo_joint_movement(arm, angle_deg=25, delay=0.5):
     for joint in all_joints:
         print(f"\nMoving '{joint.name}' to +{angle_deg}°")
         joint.set_position_radians(angle_rad)
-        arm.wait_until_stopped()
+        joint.wait_until_stopped()
         input("Press Enter to return to 0...")
 
         print(f"Returning '{joint.name}' to 0°")
         joint.set_position_radians(0)
-        arm.wait_until_stopped()
+        joint.wait_until_stopped()
         time.sleep(delay)
 
     print("\nDemo complete.")
