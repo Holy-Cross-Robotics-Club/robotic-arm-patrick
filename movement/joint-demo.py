@@ -4,7 +4,7 @@
 # The code will have each joint move 30 degrees before returning to neutral (0 degrees) 
 
 import ctypes
-cytpes.CDLL("/opt/homebrew/lib/libhidapi.0.14.0.dylib")
+ctypes.CDLL("/opt/homebrew/lib/libhidapi.0.14.0.dylib")
 import hid
 
 from controller import Controller
