@@ -160,7 +160,7 @@ class Controller:
             self.connection = Simulation()
             self.vieweronly = DeadEnd()
         else:
-            raise Exception("Either use_arm or use_arm, or both, must be True.")
+            raise Exception("Either use_arm or use_sim, or both, must be True.")
         self.gripper =  Servo(self, jid=5, sid=1, default_time=200, name="gripper")
         self.hand  =    Servo(self, jid=4, sid=2, default_time=400, name="hand")
         self.wrist  =   Servo(self, jid=3, sid=3, default_time=800, name="wrist")
