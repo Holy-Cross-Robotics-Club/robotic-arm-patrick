@@ -33,8 +33,6 @@
 # Other motion-planning approaches are possible and have been discussed.
 
 from controller import Controller
-from connection import Connection
-from simulation import Simulation
 from direct_kinematics import *
 from shortcut_kinematics import shortcut_solve
 from standard_kinematics import calculate_joint_angles_delta
@@ -206,20 +204,12 @@ def iterative_goto(arm, cart_target, attack=None, hand=None, grip=None, verbose=
 
 if __name__ == "__main__":
 
-    use_sim = False
-    use_arm = False
-    strategy = None
+    arm = Controller.parse_args_for_arm(sys.argv)
 
+    strategy = None
     cmd_idx = None
     for i, arg in enumerate(sys.argv[1:]):
-        if arg == "--sim":
-            use_sim = True
-        elif arg == "--arm":
-            use_arm = True
-        elif arg == "--both":
-            use_sim = True
-            use_arm = True
-        elif arg.startswith("--strategy="):
+        if arg.startswith("--strategy="):
             _, _, strategy = arg.partition("=")
         elif arg in ["--help", "-?"]:
             print("Usage:")
@@ -234,7 +224,6 @@ if __name__ == "__main__":
             print("  --arm          ... connect to the physical robot arm")
             print("  --both         ... use both the simulation and physical arm")
             print("  --strategy=X   ... use strategy X for motion planning")
-            print("  --arm          ... connect to the physical robot arm")
             print("  --help, -?     ... show this message")
         elif arg.startswith("-"):
             print(f"Unrecognized option '{arg}'. Try '--help' instead.")
@@ -248,24 +237,6 @@ if __name__ == "__main__":
     else:
         action = sys.argv[cmd_idx:]
 
-    while not use_sim and not use_arm:
-        print("\nChoose an option:")
-        print("  sim  - Use the browser-based simulation")
-        print("  arm  - Connect to the physical robot arm")
-        choice = input("Enter your choice, or hit enter to use both: ").strip().lower()
-        if choice == "sim":
-            use_sim = True
-            print("NOTE: in future, you can use './robot.py --sim' to skip this menu.")
-        elif choice == "arm":
-            use_arm = True
-            print("NOTE: in future, you can use './robot.py --arm' to skip this menu.")
-        elif choice in [ "", "both" ]:
-            use_sim = True
-            use_arm = True
-            print("NOTE: in future, you can use './robot.py --both' to skip this menu.")
-        else:
-            print("Sorry, that's not an option. Type 'sim' or 'arm' or 'both'.")
-
     if strategy is None:
         print("\nChoose a motion-planning strategy:")
         print("  standard  - Use an iterative Jacobian planner")
@@ -275,7 +246,6 @@ if __name__ == "__main__":
             strategy = "shortcut"
         print(f"NOTE: in future, you can use './robot.py --strategy={strategy}' to skip this menu.")
 
-    arm = Controller(use_arm, use_sim)
     arm.connect()
 
     q_current = np.array(arm.get_multiple_position_radians(arm.joints))

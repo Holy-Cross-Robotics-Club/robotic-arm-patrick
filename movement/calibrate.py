@@ -6,28 +6,19 @@
 # angle (in degrees) to test the calibration of that joint.
 
 from controller import Controller
-from connection import Connection
-from simulation import Simulation
 import time as clock
 import numpy as np
 import sys
 
 if __name__ == "__main__":
+    
+    arm = Controller.parse_args_for_arm(sys.argv)
 
-    use_sim = False
-    use_arm = False
     joint_arg = None
     servo_time = None # for speed, use default
 
     for arg in sys.argv[1:]:
-        if arg == "--sim":
-            use_sim = True
-        elif arg == "--arm":
-            use_arm = True
-        elif arg == "--both":
-            use_sim = True
-            use_arm = True
-        elif arg.startswith("--time="):
+        if arg.startswith("--time="):
             servo_time = int(arg[7:])
         elif arg in [ "--joint=0", "--servo=6", "--base"]:
             joint_arg = "base"
@@ -60,25 +51,6 @@ if __name__ == "__main__":
             print(f"Unrecognized option '{arg}'. Try '--help' instead.")
             sys.exit(1)
 
-    while not use_sim and not use_arm:
-        print("\nChoose an option:")
-        print("  sim  - Use the browser-based simulation")
-        print("  arm  - Connect to the physical robot arm")
-        choice = input("Enter your choice, or hit enter to use both: ").strip().lower()
-        if choice == "sim":
-            use_sim = True
-            print("NOTE: in future, you can use './main.py --sim' to skip this menu.")
-        elif choice == "arm":
-            use_arm = True
-            print("NOTE: in future, you can use './main.py --arm' to skip this menu.")
-        elif choice in [ "", "both" ]:
-            use_sim = True
-            use_arm = True
-            print("NOTE: in future, you can use './main.py --both' to skip this menu.")
-        else:
-            print("Sorry, that's not an option. Type 'sim' or 'arm' or 'both'.")
-
-    arm = Controller(use_arm, use_sim)
     arm.connect()
 
     joint = None

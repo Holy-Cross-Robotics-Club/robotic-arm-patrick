@@ -7,27 +7,20 @@
 # mostly useful for debugging, and perhaps for calibration.
 
 from controller import Controller
-from connection import Connection
-from simulation import Simulation
 from direct_kinematics import *
 import time as clock
 import sys
 
 if __name__ == "__main__":
 
-    use_sim = False
-    use_arm = False
+    arm = Controller.parse_args_for_arm(sys.argv, allow_both=False)
 
     active = [ False ] * 6
 
     units = "deg"
 
     for arg in sys.argv[1:]:
-        if arg == "--sim":
-            use_sim = True
-        elif arg == "--arm":
-            use_arm = True
-        elif arg in [ "--deg", "--rad", "--clicks" ]:
+        if arg in [ "--deg", "--rad", "--clicks" ]:
             units = arg[2:]
         elif arg in [ "--joint=0", "--servo=6", "--base"]:
             active[0] = True
@@ -68,21 +61,6 @@ if __name__ == "__main__":
     if not any(active):
         active = [ True ] * 6
 
-    while not use_sim and not use_arm:
-        print("\nChoose an option:")
-        print("  sim  - Monitor the browser-based simulation")
-        print("  arm  - Connect to and monitor the physical robot arm")
-        choice = input("Enter your choice, or hit enter to use both: ").strip().lower()
-        if choice == "sim":
-            use_sim = True
-            print("NOTE: in future, you can use './main.py --sim' to skip this menu.")
-        elif choice == "arm":
-            use_arm = True
-            print("NOTE: in future, you can use './main.py --arm' to skip this menu.")
-        else:
-            print("Sorry, that's not an option. Type 'sim' or 'arm'.")
-
-    arm = Controller(use_arm, use_sim)
     arm.connect()
 
     if all(active):

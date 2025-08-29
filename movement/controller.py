@@ -144,15 +144,92 @@ class Servo:
         return hex
 
 class Controller:
-    def __init__(self, use_arm=True, use_sim=False):
+    product_id = 0x5750  # USB product ID for HiWonder xArm
+    vendor_id = 0x0483   # USB vendor ID for HiWonder xArm
+
+    @staticmethod
+    def enumerate_arms():
+        return Connection.enumerate_devices(Controller.product_id, Controller.vendor_id)
+
+    @staticmethod
+    def parse_args_for_arm(argv, allow_both=True):
+        use_sim = False
+        use_arm = False
+        for i in range(1, len(argv)):
+            arg = argv[i]
+            if arg == "--sim":
+                use_sim = True
+                del argv[i]
+                i -= 1
+            elif arg == "--arm":
+                use_arm = True
+                del argv[i]
+                i -= 1
+            elif allow_both and arg == "--both":
+                use_sim = True
+                use_arm = True
+                del argv[i]
+                i -= 1
+            else:
+                pass
+        while not use_sim and not use_arm:
+            print("\nChoose an option:")
+            print("  sim  - Use the browser-based simulation")
+            print("  arm  - Connect to the physical robot arm")
+            if allow_both:
+                print("  both - Connect to the physical robot arm, and browser-based simulation")
+                choice = input("Enter your choice, or hit enter to use both: ").strip().lower()
+            else:
+                choice = input("Enter your choice, or hit enter to use arm: ").strip().lower()
+            if choice == "sim":
+                use_sim = True
+                print("NOTE: in future, you can use '--sim' as a command-line argument to skip this menu.")
+            elif choice == "arm" or (choice == "" and not allow_both):
+                use_arm = True
+                print("NOTE: in future, you can use '--arm' as a command-line argument to skip this menu.")
+            elif allow_both and (choice in [ "", "both" ]):
+                use_sim = True
+                use_arm = True
+                print("NOTE: in future, you can use '--both' as a command-line argument to skip this menu.")
+            else:
+                if allow_both:
+                    print("Sorry, that's not an option. Type 'sim' or 'arm' or 'both'.")
+                else:
+                    print("Sorry, that's not an option. Type 'sim' or 'arm' or 'both'.")
+        dev = None
+        if use_arm:
+            devs = Controller.enumerate_arms()
+            if not devs:
+                raise AssertionError("USB connection for arm not detected. Are you sure the xArm is plugged in and turned on?")
+            if len(devs) == 1:
+                dev = devs[0]
+            else:
+                while not dev:
+                    print("\nDetected %d arms:" % (len(devs)))
+                    for i in range(len(devs)):
+                        print("  %d  - Device path %s" % (i+1, str(devs[i])))
+                    choice = input("Pick one, or hit enter to use the first one listed: ").strip()
+                    try:
+                        choice = int(choice) if choice else 1
+                    except:
+                        choice = -1
+                    if choice <= 0 or choice > len(devs):
+                        print("Sorry, that's not an option. Enter a number between 1 and %d." % (len(devs)))
+                        continue
+                    dev = devs[choice-1]
+            print("Connecting to USB device %s" % (str(dev)))
+        arm = Controller(use_arm, use_sim, arm_dev=dev)
+        return arm
+
+    def __init__(self, use_arm=True, use_sim=False, arm_dev=None):
         if use_arm and use_sim:
             # If both the arm and the simulator are enabled, use the arm for the
             # primary connection, and the simulation in view-only mode.
-            self.connection = Connection()
+            self.connection = Connection(arm_dev)
             self.vieweronly = Simulation()
         elif use_arm:
             # If using the arm but no simulator, disable the view-only mode.
-            self.connection = Connection()
+            self.connection = Connection(arm_dev)
             self.vieweronly = DeadEnd()
         elif use_sim:
             # If using the simulator but no arm, the simulator is used as the
@@ -168,11 +245,9 @@ class Controller:
         self.shoulder = Servo(self, jid=1, sid=5, default_time=800, name="shoulder")
         self.base =     Servo(self, jid=0, sid=6, default_time=800, name="base")
         self.joints = [ self.base, self.shoulder, self.elbow, self.wrist, self.hand, self.gripper ]
-        self.product_id = 0x5750
-        self.vendor_id = 0x0483
     def connect(self):
-        self.connection.connect(self.product_id, self.vendor_id)
-        self.vieweronly.connect(self.product_id, self.vendor_id)
+        self.connection.connect()
+        self.vieweronly.connect()
     def disconnect(self):
         self.connection.close()
         self.vieweronly.close()

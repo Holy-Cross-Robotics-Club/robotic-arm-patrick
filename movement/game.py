@@ -7,8 +7,6 @@
 # It can pick up a cup from any position, or put it down in any position.
 
 from controller import Controller
-from connection import Connection
-from simulation import Simulation
 import numpy as np
 import time as clock
 from robot import goto, goto_rest
@@ -16,19 +14,11 @@ import sys
 
 if __name__ == "__main__":
 
-    use_sim = False
-    use_arm = False
+    arm = Controller.parse_args_for_arm(sys.argv)
 
     cmd_idx = None
     for i, arg in enumerate(sys.argv[1:]):
-        if arg == "--sim":
-            use_sim = True
-        elif arg == "--arm":
-            use_arm = True
-        elif arg == "--both":
-            use_sim = True
-            use_arm = True
-        elif arg in ["--help", "-?"]:
+        if arg in ["--help", "-?"]:
             print("Usage:")
             print("  ./game.py [options] point A        # point at cup position A (or B or C, or UP, or REST)")
             print("  ./game.py [options] pickup A       # pick up the cup at position A (or B or C)")
@@ -74,25 +64,6 @@ if __name__ == "__main__":
         print(f"Unknown position '{cup}', should be A, B, or C.")
         sys.exit(1)
 
-    while not use_sim and not use_arm:
-        print("\nChoose an option:")
-        print("  sim  - Use the browser-based simulation")
-        print("  arm  - Connect to the physical robot arm")
-        choice = input("Enter your choice, or hit enter to use both: ").strip().lower()
-        if choice == "sim":
-            use_sim = True
-            print("NOTE: in future, you can use './game.py --sim' to skip this menu.")
-        elif choice == "arm":
-            use_arm = True
-            print("NOTE: in future, you can use './game.py --arm' to skip this menu.")
-        elif choice in [ "", "both" ]:
-            use_sim = True
-            use_arm = True
-            print("NOTE: in future, you can use './game.py --both' to skip this menu.")
-        else:
-            print("Sorry, that's not an option. Type 'sim' or 'arm' or 'both'.")
-
-    arm = Controller(use_arm, use_sim)
     arm.connect()
 
     if action == "point":

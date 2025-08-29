@@ -13,7 +13,7 @@ def wait_until_all_stopped(joints):
     while any(j.is_moving() for j in joints):
         time.sleep(0.05)
 
-def demo_joint_movement(arm, angle_deg=25, delay=0.5):
+def demo_joint_movement(arm, angle_deg=45, delay=0.5):
     print("\nStarting fixed joint demo...")
 
     # Build unique list of joints (avoid duplicates)
@@ -42,14 +42,9 @@ def demo_joint_movement(arm, angle_deg=25, delay=0.5):
     print("\nDemo complete.")
 
 if __name__ == "__main__":
-    use_sim = "--sim" in sys.argv or "--both" in sys.argv
-    use_arm = "--arm" in sys.argv or "--both" in sys.argv
 
-    if not use_sim and not use_arm:
-        print("Usage: ./joint_demo.py [--sim|--arm|--both]")
-        sys.exit(1)
+    arm = Controller.parse_args_for_arm(sys.argv)
 
-    arm = Controller(use_arm, use_sim)
     arm.connect()
 
     demo_joint_movement(arm)

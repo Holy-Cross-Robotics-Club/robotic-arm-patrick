@@ -96,7 +96,7 @@ class Simulation:
     """
     def __init__(self):
         self.connection = None
-    def connect(self, pid, vid, fatal=True):
+    def connect(self, fatal=True):
         try:
             self.connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.connection.connect(arm_addr)

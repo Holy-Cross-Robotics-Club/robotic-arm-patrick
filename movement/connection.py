@@ -20,31 +20,41 @@ class Connection:
     """ Simple wrapper for hidapi.
     Intended to read and write OUT/IN reports easily.
     """
-    def __init__(self):
-        self.connection = None
-        self.info = None
-    def connect(self, pid, vid):
-        """ 
-        Connect to a USB HID device with the specified product ID (pid) and vendor ID (vid). 
-        Enumerates all connected USB HID devices, matches against the given PID and VID. if found, opens a connection to the device.
-        """
-        devs = hid.enumerate()
+
+    @staticmethod
+    def enumerate_devices(pid, vid):
+        """Return a list of devices matching the given product and vendor IDs """
+        alldevs = hid.enumerate()
+        devs = [ d for d in alldevs if d['product_id'] == int(pid) and d['vendor_id'] == int(vid) ]
         for d in devs:
-            if d['product_id'] == int(pid) and d['vendor_id'] == int(vid):
-                self.info = d
-                self.connection = hid.device()
-                self.connection.open_path(self.info['path'])
-        if self.connection is None: raise AssertionError("USB connection for arm not detected. Are you sure it's plugged in and turned on?")
-        else: print(f"Successfully conntected to {self.info['product_string']}.")
+            print(str(d))
+        return devs
+
+    def __init__(self, dev):
+        self.info = dev
+        self.connection = None
+
+    def connect(self):
+        """ 
+        Connect to a USB HID device with the specified path. A list of available paths can be
+        obtained from enumerate_devices().
+        """
+        self.connection = hid.device()
+        self.connection.open_path(self.info['path'])
+        print(f"Successfully conntected to {self.info['product_string']}.")
+
     def close(self):
         if self.connection is None: return
         self.connection.close()
+        self.connection = None
         print(f"Closed {self.info['product_string']}.")
+
     def write_out(self, m):
         # TODO: do some sanity checks
         cnt = self.connection.write(m)
         if cnt != len(m):
             print(f"USB ERROR: result={err} after writing {len(m)} bytes {m}")
+
     def read_in(self, cmd, return_param_size):
         tot_size = 4 + return_param_size # 0x55 0x55 len cmd ... followed by return_params
         data = self.connection.read(4 + return_param_size)
@@ -69,7 +79,7 @@ class DeadEnd:
     """ An alternative implementation of Connection that does nothing. """
     def __init__(self):
         pass
-    def connect(self, pid, vid):
+    def connect(self):
         pass
     def close(self):
         pass
