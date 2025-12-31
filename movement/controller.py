@@ -155,23 +155,21 @@ class Controller:
     def parse_args_for_arm(argv, allow_both=True):
         use_sim = False
         use_arm = False
-        for i in range(1, len(argv)):
+        i = 1
+        while i < len(argv):
             arg = argv[i]
             if arg == "--sim":
                 use_sim = True
                 del argv[i]
-                i -= 1
             elif arg == "--arm":
                 use_arm = True
                 del argv[i]
-                i -= 1
             elif allow_both and arg == "--both":
                 use_sim = True
                 use_arm = True
                 del argv[i]
-                i -= 1
             else:
-                pass
+                i += 1
         while not use_sim and not use_arm:
             print("\nChoose an option:")
             print("  sim  - Use the browser-based simulation")
@@ -269,6 +267,7 @@ class Controller:
         result = self.write_then_read_in(pkt, 21, 1 + 3*n)
         if not result:
             # retry? Sometimes one of the servos fails to respond, leading to a size mismatch
+            # FROM BEN: this is an issue with faulty cables!! after replacing cables, this issue went away
             clock.sleep(0.020) # 20ms delay
             result = self.write_then_read_in(pkt, 21, 1 + 3*n)
             if not result:

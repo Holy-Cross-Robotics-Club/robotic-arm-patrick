@@ -215,16 +215,17 @@ if __name__ == "__main__":
             print("Usage:")
             print("  ./robot.py [options] home                 # go to x=0.0 y=0.0 z=0.5, in meters")
             print("  ./robot.py [options] goto x y z [attack]  # go to coordinates, in meters, w/w/o attack angle, in degrees")
-            print("  ./robot.py [options] move dx dy dz  # move a distance, in meters")
+            print("  ./robot.py [options] move dx dy dz        # move a distance, in meters")
             print("Note: underscore '_' can be used to omit a coordinate. For example:")
-            print("   ./robot --sim goto _ _ 0.5    # in simulation, leave x, y alone, go to z=0.5")
-            print("   ./robot --arm move 0.2 _ _    # with real arm, move x by +0.2 meters")
+            print("   ./robot.py --sim goto _ _ 0.5    # in simulation, leave x, y alone, go to z=0.5")
+            print("   ./robot.py --arm move 0.2 _ _    # with real arm, move x by +0.2 meters")
             print("Options:")
             print("  --sim          ... open the browser-based simulation")
             print("  --arm          ... connect to the physical robot arm")
             print("  --both         ... use both the simulation and physical arm")
             print("  --strategy=X   ... use strategy X for motion planning")
             print("  --help, -?     ... show this message")
+            sys.exit(0)
         elif arg.startswith("-"):
             print(f"Unrecognized option '{arg}'. Try '--help' instead.")
             sys.exit(1)
@@ -258,13 +259,13 @@ if __name__ == "__main__":
         dest_coords = [0.1, 0.1, 0.2] # an arbitrary favorite position
     elif len(action) == 1 and action[0] == "home":
         dest_coords = [0.0, 0.0, 0.5]
-    elif len(action) == 4 or len(action) == 5 and action[0] == "goto":
+    elif action[0] == "goto" and (len(action) == 4 or len(action) == 5):
         x = end_pos[0] if action[1] == '_' else float(action[1])
         y = end_pos[1] if action[2] == '_' else float(action[2])
         z = end_pos[2] if action[3] == '_' else float(action[3])
         a = np.radians(float(action[4])) if len(action) == 5 else None
         dest_coords = [x, y, z]
-    elif len(action) == 4 and action[0] == "move":
+    elif action[0] == "move" and len(action) == 4:
         dx = 0.0 if action[1] == '_' else float(action[1])
         dy = 0.0 if action[2] == '_' else float(action[2])
         dz = 0.0 if action[3] == '_' else float(action[3])
