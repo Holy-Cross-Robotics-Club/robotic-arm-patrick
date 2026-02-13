@@ -5,6 +5,7 @@ from controller import Controller
 import sys
 import robot
 import numpy as np
+import time
 
 home_coords = [0.0, 0.0, 0.5] # saving home coordinates for convenience
 
@@ -14,13 +15,30 @@ def main():
 
     # "shortcut": solves IK and sets joint angles directly
     # "standard": iteratively approximates direction, executes small movement, then revaluates
-    strategy = "shortcut"
+    my_strategy = "shortcut"
 
     # the destination (or "target") could be a list of Cartesian (x,y,z) coordinates
-    target = [0.1, 0.1, 0.2]
-    target = np.array(target) # convert python list to numpy array
+    center = np.array([0.15, 0.0, 0.30]) # convert python list to numpy array
+    radius = 0.06
 
-    robot.goto(arm, target, verbose=True, strategy=strategy)
+    robot.goto(arm, np.array(home_coords), verbose=True, strategy=my_strategy)
+    time.sleep(2)
+
+    robot.goto(arm, center, verbose=True, strategy=my_strategy)
+    time.sleep(2)
+
+    for theta in np.linspace(0, 4*np.pi, 80):  # 2 spins
+        x = center[0] + radius * np.cos(theta)
+        y = center[1] + radius * np.sin(theta)
+        
+        # Add bounce using sine wave
+        z = center[2] + 0.05 * np.sin(3 * theta)
+
+        target = np.array([x, y, z])
+        robot.goto(arm, target, verbose=False, strategy=my_strategy)
+        time.sleep(0.05)
+
+    robot.goto(arm, np.array(home_coords), verbose=True, strategy=my_strategy)
 
     arm.disconnect() # important: disconnect from the controller when done
 
