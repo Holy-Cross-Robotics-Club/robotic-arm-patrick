@@ -33,9 +33,6 @@ def main():
         
         # Add bounce using sine wave
         z = center[2] + 0.05 * np.sin(3 * theta)
-
-        target = np.array([x, y, z])
-        robot.goto(arm, target, verbose=False, strategy=my_strategy)
         time.sleep(0.05)
 
     robot.goto(arm, np.array(home_coords), verbose=True, strategy=my_strategy)
