@@ -9,7 +9,7 @@ import math
 from xarm.wrapper import XArmAPI
 
 VENDOR_ID  = 0x2563
-PRODUCT_ID = 0x0575
+PRODUCT_ID = 0x0526
 
 # Show diffs vs baseline? (set True while mapping your bits)
 RAW_DUMP   = False
@@ -65,21 +65,20 @@ def synth_axis_from_bits(b, neg_bit, pos_bit, value=VAXIS_VALUE):
     return 0.0
 
 def parse_report(data):
-    # We only need first few bytes for this layout
     if len(data) < 5:
         return None
 
-    b0 = data[0]         # buttons bitfield (on your unit)
+    b0 = data[0]
     lx = data[3]
     ly = data[4]
+    rx = data[1]   # right stick X is byte 1
+    ry = data[2]   # right stick Y is byte 2
 
-    # Sticks (right stick seems fixed at 0x80 on your pad; keep them centered)
     lx_n = to_signed_norm(lx)
     ly_n = -to_signed_norm(ly)
-    rx_n = synth_axis_from_bits(b0, RX_LEFT, RX_RIGHT)
-    ry_n = synth_axis_from_bits(b0, RY_UP,   RY_DOWN)
+    rx_n = to_signed_norm(rx)   # was synth_axis_from_bits, now real analog
+    ry_n = -to_signed_norm(ry)  # invert so up = positive
 
-    # Two extra axes synthesized from button pairs in BYTE 0
     ax5 = synth_axis_from_bits(b0, B0_LEFT, B0_RIGHT)
     ax6 = synth_axis_from_bits(b0, B0_UP,   B0_DOWN)
 
@@ -251,13 +250,13 @@ class ArmController:
             self.target[j] += a[j] * step
 
         # (Optional) soft clamps if you want—commented out to let the controller be permissive.
-        # def clamp(x, lo, hi): return min(hi, max(lo, x))
-        # self.target[0] = clamp(self.target[0], math.radians(-170), math.radians(170))
-        # self.target[1] = clamp(self.target[1], math.radians(-120), math.radians(120))
-        # self.target[2] = clamp(self.target[2], math.radians(-225), math.radians(11))
-        # self.target[3] = clamp(self.target[3], math.radians(-180), math.radians(180))
-        # self.target[4] = clamp(self.target[4], math.radians(-180), math.radians(180))
-        # self.target[5] = clamp(self.target[5], math.radians(-360), math.radians(360))
+        def clamp(x, lo, hi): return min(hi, max(lo, x))
+        self.target[0] = clamp(self.target[0], math.radians(-170), math.radians(170))
+        self.target[1] = clamp(self.target[1], math.radians(-120), math.radians(120))
+        self.target[2] = clamp(self.target[2], math.radians(-225), math.radians(0))
+        self.target[3] = clamp(self.target[3], math.radians(-180), math.radians(180))
+        self.target[4] = clamp(self.target[4], math.radians(-180), math.radians(180))
+        self.target[5] = clamp(self.target[5], math.radians(-360), math.radians(360))
 
         # Stream the new target. wait=False so we can keep updating each loop.
         # Note: speed is interpreted in rad/s when is_radian=True.
